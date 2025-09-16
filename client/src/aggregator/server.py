@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 import uvicorn
 from fastapi import APIRouter, FastAPI, HTTPException
 from pydantic import BaseModel
+from starlette.concurrency import run_in_threadpool
 
 from .errors import InvalidProofError
 
@@ -33,8 +34,11 @@ class AggregatorServer:
 
     async def submit_proof(self, data: ProofRequest):
         try:
-            self.aggregator.process_submitted_proof(
-                data.task_id, data.proof, data.signature
+            await run_in_threadpool(
+                self.aggregator.process_submitted_proof,
+                data.task_id,
+                data.proof,
+                data.signature,
             )
             return {"status": "ok"}
         except InvalidProofError as exc:
