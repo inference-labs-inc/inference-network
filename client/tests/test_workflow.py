@@ -16,7 +16,7 @@ class TestWorkflow:
     def start_aggregator_server(self, aggregator: Aggregator):
         self._stop_event = threading.Event()
         config = uvicorn.Config(
-            app=aggregator.app, host="0.0.0.0", port=8090, log_level="info"
+            app=aggregator.server.app, host="0.0.0.0", port=8090, log_level="info"
         )
         self.server = uvicorn.Server(config)
 

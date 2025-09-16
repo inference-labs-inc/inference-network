@@ -576,6 +576,11 @@
   },
   {
     "type": "error",
+    "name": "InvalidModelName",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidModelVerifier",
     "inputs": []
   },

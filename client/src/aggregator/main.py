@@ -5,13 +5,12 @@ import time
 from typing import Tuple
 
 import eth_abi
-import uvicorn
 from eth_account import Account
 from eth_account.messages import encode_defunct
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
 from web3 import Web3
 
+from aggregator.errors import InvalidProofError
+from aggregator.server import AggregatorServer
 from common.abis import ERC20_ABI, STRATEGY_ABI
 from common.auto_update import AutoUpdate
 from common.config import AggregatorConfig
@@ -19,14 +18,14 @@ from common.constants import (
     RESOLVE_BLOCKS_DELAY,
 )
 from common.contract_constants import (
+    ContractVerificationStrategy,
     TaskStateMap,
     TaskStructMap,
-    ContractVerificationStrategy,
 )
 from common.eth import EthereumClient, load_ecdsa_private_key
 from common.logging import get_logger
-from models.proof.ezkl_handler import EZKLHandler
 from models.execution_layer.model_registry import load_circuit_input_class
+from models.proof.ezkl_handler import EZKLHandler
 
 logger = get_logger("aggregator")
 
@@ -50,20 +49,6 @@ def run_aggregator(config: AggregatorConfig) -> None:
     #         time.sleep(10)
 
 
-class InvalidProofError(ValueError):
-    pass
-
-
-class ProofRequest(BaseModel):
-    """
-    Pydantic model for operator submits proof to the aggregator
-    """
-
-    task_id: int
-    proof: str
-    signature: str
-
-
 class Aggregator:
     def __init__(self, config: AggregatorConfig = None):
         self.config = config
@@ -83,40 +68,14 @@ class Aggregator:
 
         self.auto_update = AutoUpdate()
 
-        # Initialize FastAPI app
-        self.server_thread: threading.Thread | None = None
-        self.app = FastAPI()
-
-        # Add FastAPI route
-        @self.app.post("/proof")
-        async def _(data: ProofRequest):
-            try:
-                self.process_submitted_proof(data.task_id, data.proof, data.signature)
-            except InvalidProofError as exc:
-                raise HTTPException(status_code=400, detail=str(exc))
+        # HTTP server
+        self.server = AggregatorServer(self)
 
     def start_server(self):
-        host, port = self.config.aggregator_server_ip_port_address.split(":")
-        uvicorn.run(
-            self.app,
-            host=host,
-            port=int(port),
-            # ssl_keyfile=self.config["ssl_keyfile"],
-            # ssl_certfile=self.config["ssl_certfile"],
-        )
-        # no need to run in a separate thread for now, maybe add some CLI arg to start it like a daemon
-        # self.server_thread = threading.Thread(
-        #     target=uvicorn.run,
-        #     args=(self.app,),
-        #     kwargs={
-        #         "host": host,
-        #         "port": int(port),
-        #         # "ssl_keyfile": ...,
-        #         # "ssl_certfile": ...,
-        #     },
-        #     daemon=True,
-        # )
-        # self.server_thread.start()
+        """
+        Runs and blocks the current thread
+        """
+        self.server.start()
 
     def start_sending_new_tasks(self, loop_running: bool = True):
         """
@@ -318,7 +277,7 @@ class Aggregator:
         processed_count: int = 0
         while True:
             for event in task_completed_events.get_new_entries():
-                logger.debug(f"Some task has been completed. Processing...")
+                logger.debug("Some task has been completed. Processing...")
                 self.process_completed_task(event)
                 processed_count += 1
 

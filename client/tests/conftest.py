@@ -41,7 +41,7 @@ def aggregator():
     return Aggregator(config)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def operator():
     config = OperatorConfig(
         eth_rpc_url="http://localhost:8545",
@@ -52,20 +52,20 @@ def operator():
             {
                 "node_name": "node1",
                 "metadata": "optional metadata",
-                "total_fucus": 100,
+                "total_fucus": 500,
                 "is_active": True,
                 "models": [
-                    {"model_name": "model_0", "allocated_fucus": 50},
+                    {"model_name": "model_0", "allocated_fucus": 500},
                     # {"model_name": "model_1", "allocated_fucus": 50},
                 ],
             },
             {
                 "node_name": "node2",
                 "metadata": "optional metadata",
-                "total_fucus": 100,
+                "total_fucus": 900,
                 "is_active": True,
                 "models": [
-                    {"model_name": "model_0", "allocated_fucus": 90},
+                    {"model_name": "model_0", "allocated_fucus": 900},
                     # {"model_name": "model_1", "allocated_fucus": 10},
                 ],
             },
