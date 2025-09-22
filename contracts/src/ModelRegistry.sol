@@ -171,4 +171,23 @@ contract ModelRegistry is OwnableUpgradeable, IModelRegistry {
     function isActive(uint256 modelId) external view returns (bool) {
         return activeModelIds.contains(modelId);
     }
+
+    /// @inheritdoc IModelRegistry
+    function getActiveModelsWithDetails() external view returns (ModelDetails[] memory models) {
+        uint256[] memory activeIds = activeModelIds.values();
+        models = new ModelDetails[](activeIds.length);
+        
+        for (uint256 i = 0; i < activeIds.length; i++) {
+            uint256 modelId = activeIds[i];
+            models[i] = ModelDetails({
+                modelId: modelId,
+                modelName: modelName[modelId],
+                modelVerifier: modelVerifier[modelId],
+                verificationStrategy: verificationStrategy[modelId],
+                computeCost: computeCost[modelId],
+                requiredFUCUs: requiredFUCUs[modelId],
+                isActive: true // We know it's active since we got it from activeModelIds
+            });
+        }
+    }
 }

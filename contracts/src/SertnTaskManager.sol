@@ -19,7 +19,6 @@ import {IModelRegistry} from "../interfaces/IModelRegistry.sol";
 import {ModelRegistry} from "./ModelRegistry.sol";
 import {SertnNodesManager} from "./SertnNodesManager.sol";
 
-
 contract SertnTaskManager is OwnableUpgradeable, ISertnTaskManager {
     using EnumerableSet for EnumerableSet.UintSet;
     // queue of tasks that are waiting to be assigned to an operator
@@ -32,6 +31,19 @@ contract SertnTaskManager is OwnableUpgradeable, ISertnTaskManager {
     mapping(uint256 => Task) public tasks;
     // all assigned tasks IDs, which are not resolved and not rejected
     EnumerableSet.UintSet private pendingTasks;
+
+    // History tracking mappings for efficient task history queries
+    // modelId => array of task IDs
+    mapping(uint256 => uint256[]) public tasksByModel;
+    // operator address => array of task IDs
+    mapping(address => uint256[]) public tasksByOperator;
+    // user/aggregator address => array of task IDs
+    mapping(address => uint256[]) public tasksByUser;
+    // TaskState => array of task IDs
+    mapping(TaskState => uint256[]) public tasksByState;
+
+    // Mapping to track task indices for efficient removal (if needed later)
+    mapping(uint256 => mapping(uint8 => uint256)) private taskIndexInState; // taskId => state => index
 
     IERC20 public ser;
 
@@ -84,6 +96,9 @@ contract SertnTaskManager is OwnableUpgradeable, ISertnTaskManager {
         emit TaskCreated(task.nonce, task.user);
         tasks[task.nonce].state = TaskState.ASSIGNED;
         pendingTasks.add(task.nonce);
+
+        // Add to history tracking
+        _addTaskToHistory(task.nonce, tasks[task.nonce]);
 
         // Allocate FUCUs for this task
         _allocateFucusForTask(task.nonce);
@@ -275,5 +290,192 @@ contract SertnTaskManager is OwnableUpgradeable, ISertnTaskManager {
 
         // Release the allocated FUCUs
         sertnNodesManager.releaseFucusForTask(task.operator, task.modelId, requiredFucus);
+    }
+
+    // === TASK HISTORY HELPER FUNCTIONS ===
+
+    /**
+     * @notice Internal helper function to paginate an array of task IDs
+     * @param taskArray Storage reference to the array to paginate
+     * @param offset Starting index
+     * @param limit Maximum number of results
+     * @return Paginated array of task IDs
+     */
+    function _paginateTaskIds(
+        uint256[] storage taskArray,
+        uint256 offset,
+        uint256 limit
+    ) internal view returns (uint256[] memory) {
+        if (offset >= taskArray.length) {
+            return new uint256[](0);
+        }
+
+        uint256 end = offset + limit;
+        if (end > taskArray.length) {
+            end = taskArray.length;
+        }
+
+        uint256[] memory result = new uint256[](end - offset);
+        for (uint256 i = offset; i < end; i++) {
+            result[i - offset] = taskArray[i];
+        }
+        return result;
+    }
+
+    /**
+     * @notice Add a task to the history tracking mappings
+     * @param taskId The ID of the task
+     * @param task The task data
+     */
+    function _addTaskToHistory(uint256 taskId, Task memory task) internal {
+        // Add to model history
+        tasksByModel[task.modelId].push(taskId);
+
+        // Add to operator history
+        tasksByOperator[task.operator].push(taskId);
+
+        // Add to user history
+        tasksByUser[task.user].push(taskId);
+
+        // Add to state history
+        tasksByState[task.state].push(taskId);
+        taskIndexInState[taskId][uint8(task.state)] = tasksByState[task.state].length - 1;
+    }
+
+    /**
+     * @notice Update task state in history tracking
+     * @param taskId The ID of the task
+     * @param oldState The previous state
+     * @param newState The new state
+     */
+    function _updateTaskStateInHistory(
+        uint256 taskId,
+        TaskState oldState,
+        TaskState newState
+    ) internal {
+        // Remove from old state array
+        uint256 oldIndex = taskIndexInState[taskId][uint8(oldState)];
+        uint256[] storage oldStateArray = tasksByState[oldState];
+        uint256 lastTaskId = oldStateArray[oldStateArray.length - 1];
+
+        // Move last element to the position of the element to remove
+        oldStateArray[oldIndex] = lastTaskId;
+        taskIndexInState[lastTaskId][uint8(oldState)] = oldIndex;
+
+        // Remove last element
+        oldStateArray.pop();
+
+        // Add to new state array
+        tasksByState[newState].push(taskId);
+        taskIndexInState[taskId][uint8(newState)] = tasksByState[newState].length - 1;
+    }
+
+    // === TASK HISTORY QUERY FUNCTIONS ===
+
+    /**
+     * @notice Get paginated task IDs for a specific model
+     * @param modelId The model ID to query
+     * @param offset Starting index
+     * @param limit Maximum number of results
+     * @return Array of task IDs (paginated)
+     */
+    function getTasksByModel(
+        uint256 modelId,
+        uint256 offset,
+        uint256 limit
+    ) external view returns (uint256[] memory) {
+        return _paginateTaskIds(tasksByModel[modelId], offset, limit);
+    }
+
+    /**
+     * @notice Get paginated task IDs for a specific operator
+     * @param operator The operator address to query
+     * @param offset Starting index
+     * @param limit Maximum number of results
+     * @return Array of task IDs (paginated)
+     */
+    function getTasksByOperator(
+        address operator,
+        uint256 offset,
+        uint256 limit
+    ) external view returns (uint256[] memory) {
+        return _paginateTaskIds(tasksByOperator[operator], offset, limit);
+    }
+
+    /**
+     * @notice Get paginated task IDs for a specific user
+     * @param user The user address to query
+     * @param offset Starting index
+     * @param limit Maximum number of results
+     * @return Array of task IDs (paginated)
+     */
+    function getTasksByUser(
+        address user,
+        uint256 offset,
+        uint256 limit
+    ) external view returns (uint256[] memory) {
+        return _paginateTaskIds(tasksByUser[user], offset, limit);
+    }
+
+    /**
+     * @notice Get all task IDs with a specific state
+     * @param state The task state to query
+     * @param offset Starting index
+     * @param limit Maximum number of results
+     * @return Array of task IDs (paginated)
+     */
+    function getTasksByState(
+        TaskState state,
+        uint256 offset,
+        uint256 limit
+    ) external view returns (uint256[] memory) {
+        return _paginateTaskIds(tasksByState[state], offset, limit);
+    }
+
+    /**
+     * @notice Get task history counts for overview statistics
+     * @param modelId The model ID (0 for all models)
+     * @param operator The operator address (address(0) for all operators)
+     * @param user The user address (address(0) for all users)
+     * @return totalTasks Total number of tasks matching criteria
+     * @return completedTasks Number of completed/resolved tasks
+     * @return rejectedTasks Number of rejected tasks
+     * @return pendingTasksCount Number of pending/assigned/challenged tasks
+     */
+    function getTaskHistoryStats(
+        uint256 modelId,
+        address operator,
+        address user
+    )
+        external
+        view
+        returns (
+            uint256 totalTasks,
+            uint256 completedTasks,
+            uint256 rejectedTasks,
+            uint256 pendingTasksCount
+        )
+    {
+        // This is a simplified version - for more complex filtering,
+        // you might need to iterate through tasks or use additional mappings
+        if (modelId > 0) {
+            totalTasks = tasksByModel[modelId].length;
+        } else if (operator != address(0)) {
+            totalTasks = tasksByOperator[operator].length;
+        } else if (user != address(0)) {
+            totalTasks = tasksByUser[user].length;
+        } else {
+            // Global stats
+            totalTasks = taskNonce - 1; // -1 because nonce starts at 1
+        }
+
+        // For detailed stats, you would need to iterate through the tasks
+        // This is a basic implementation
+        completedTasks = tasksByState[TaskState.RESOLVED].length;
+        rejectedTasks = tasksByState[TaskState.REJECTED].length;
+        pendingTasksCount =
+            tasksByState[TaskState.ASSIGNED].length +
+            tasksByState[TaskState.CHALLENGED].length +
+            tasksByState[TaskState.COMPLETED].length;
     }
 }

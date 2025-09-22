@@ -298,4 +298,86 @@ contract ModelRegistryTest is Test {
 
         vm.stopPrank();
     }
+
+    function test_getActiveModelsWithDetails_empty_when_no_active_models() public {
+        vm.startPrank(owner.key.addr);
+
+        // Disable the only active model
+        modelRegistry.disableModel(modelId);
+
+        // Get active models with details
+        IModelRegistry.ModelDetails[] memory models = modelRegistry.getActiveModelsWithDetails();
+
+        // Should have no models
+        assertEq(models.length, 0, "Should have no active models when all are disabled");
+
+        vm.stopPrank();
+    }
+
+    function test_getActiveModelsWithDetails_updates_after_model_changes() public {
+        vm.startPrank(owner.key.addr);
+
+        // Create second model
+        uint256 modelId2 = modelRegistry.createNewModel(
+            address(mockVerifier2),
+            IModelRegistry.VerificationStrategy.Offchain,
+            "model2",
+            200,
+            15
+        );
+
+        // Update first model's properties
+        modelRegistry.updateModelName(modelId, "updatedModel1");
+        modelRegistry.updateComputeCost(modelId, 500);
+        modelRegistry.updateRequiredFUCUs(modelId, 25);
+        modelRegistry.updateVerificationStrategy(
+            modelId,
+            IModelRegistry.VerificationStrategy.Offchain
+        );
+
+        // Get active models with details
+        IModelRegistry.ModelDetails[] memory models = modelRegistry.getActiveModelsWithDetails();
+        assertEq(models.length, 2, "Should have 2 active models");
+
+        // Verify both models are present
+        bool foundModel1 = false;
+        bool foundModel2 = false;
+
+        // Find and verify the updated model
+        for (uint256 i = 0; i < models.length; i++) {
+            if (models[i].modelId == modelId) {
+                assertEq(
+                    keccak256(abi.encodePacked(models[i].modelName)),
+                    keccak256(abi.encodePacked("updatedModel1")),
+                    "Updated model name should be reflected"
+                );
+                assertEq(models[i].computeCost, 500, "Updated compute cost should be reflected");
+                assertEq(models[i].requiredFUCUs, 25, "Updated FUCUs should be reflected");
+                assertEq(
+                    uint256(models[i].verificationStrategy),
+                    uint256(IModelRegistry.VerificationStrategy.Offchain),
+                    "Updated strategy should be reflected"
+                );
+                foundModel1 = true;
+            } else if (models[i].modelId == modelId2) {
+                // Verify second model remains unchanged
+                assertEq(
+                    keccak256(abi.encodePacked(models[i].modelName)),
+                    keccak256(abi.encodePacked("model2")),
+                    "Second model name should remain unchanged"
+                );
+                assertEq(
+                    models[i].computeCost,
+                    200,
+                    "Second model compute cost should remain unchanged"
+                );
+                assertEq(models[i].requiredFUCUs, 15, "Second model FUCUs should remain unchanged");
+                foundModel2 = true;
+            }
+        }
+        assertTrue(foundModel1, "Updated model should be found with correct properties");
+        assertTrue(foundModel2, "Second model should be found with original properties");
+
+        vm.stopPrank();
+    }
 }
