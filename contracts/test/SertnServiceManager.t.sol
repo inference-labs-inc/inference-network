@@ -272,7 +272,7 @@ contract SertnServiceManagerTest is Test {
         serviceManager.pullFeeFromUser(user, IERC20(address(mockToken1)), 1000);
     }
 
-    function test_taskCompleted_success() public {
+    function test_taskResolved_success() public {
         // Setup: Add aggregator and mint tokens
         vm.prank(owner);
         serviceManager.addAggregator(aggregator1);
@@ -288,7 +288,7 @@ contract SertnServiceManagerTest is Test {
         vm.prank(address(mockTaskManager));
         vm.expectEmit(true, true, false, true);
         emit ISertnServiceManager.TaskRewardAccumulated(operator, feeAmount, 0); // currentInterval is mocked as 0
-        serviceManager.taskCompleted(
+        serviceManager.taskResolved(
             operator,
             feeAmount,
             IStrategy(address(mockStrategy1)),
@@ -313,10 +313,10 @@ contract SertnServiceManagerTest is Test {
         // No revert means success
     }
 
-    function test_taskCompleted_revertNotTaskManager() public {
+    function test_taskResolved_revertNotTaskManager() public {
         vm.expectRevert(ISertnServiceManager.NotTaskManager.selector);
         vm.prank(aggregator1);
-        serviceManager.taskCompleted(
+        serviceManager.taskResolved(
             operator,
             1000,
             IStrategy(address(mockStrategy1)),
@@ -396,7 +396,7 @@ contract SertnServiceManagerTest is Test {
         );
 
         // Verify model exists
-    assertEq(modelRegistry.modelName(modelId), "test_model");
+        assertEq(modelRegistry.modelName(modelId), "test_model");
         assertEq(address(serviceManager.modelRegistry()), address(modelRegistry));
 
         vm.stopPrank();
@@ -429,7 +429,7 @@ contract SertnServiceManagerTest is Test {
 
         // Workflow: Task completed, rewards distributed
         vm.prank(address(mockTaskManager));
-        serviceManager.taskCompleted(
+        serviceManager.taskResolved(
             operator,
             feeAmount,
             IStrategy(address(mockStrategy1)),
@@ -439,7 +439,7 @@ contract SertnServiceManagerTest is Test {
         // Verify final state
         assertEq(mockToken1.balanceOf(address(serviceManager)), feeAmount);
         assertTrue(serviceManager.isAggregator(aggregator1));
-    assertEq(modelRegistry.modelName(modelId), "workflow_model");
+        assertEq(modelRegistry.modelName(modelId), "workflow_model");
 
         uint32 currentInterval = serviceManager.getCurrentInterval();
 

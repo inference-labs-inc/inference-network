@@ -20,7 +20,7 @@ contract MockSertnServiceManager {
         emit FeesPulled(user, token, fee);
     }
 
-    function taskCompleted(address operator, uint256 fee, address strategy, uint32) external {
+    function taskResolved(address operator, uint256 fee, address strategy, uint32) external {
         emit TaskCompleted(operator, fee, strategy);
     }
 

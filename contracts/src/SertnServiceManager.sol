@@ -43,15 +43,6 @@ contract SertnServiceManager is
     IModelRegistry public modelRegistry;
     ISertnRegistrar public sertnRegistrar;
 
-    // Operator info
-    // mapping(address => bytes) public opInfo;
-    // The number of nodes that a given operator has
-    // mapping(address => uint256) public operatorNodeCount;
-    // Compute units for a given operator-node
-    // mapping(address => mapping(uint256 => uint256)) public operatorNodeComputeUnits;
-    // Which models a given operator node supports
-    // mapping(address => mapping(uint256 => mapping(uint256 => bool))) public operatorNodeModelIds;
-
     // Set of aggregators
     EnumerableSet.AddressSet internal aggregators;
 
@@ -222,11 +213,11 @@ contract SertnServiceManager is
     }
 
     /// @inheritdoc ISertnServiceManager
-    function taskCompleted(
+    function taskResolved(
         address _operator,
         uint256 _fee,
         IStrategy _strategy,
-        uint32 _startTimestamp
+        uint32 _startTimestamp // TODO: do we need that?
     ) external onlyTaskManager nonReentrant {
         uint32 currentInterval = this.getCurrentInterval();
 

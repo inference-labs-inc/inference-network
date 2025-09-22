@@ -63,7 +63,7 @@ interface ISertnServiceManager {
     /**
      * @notice Task completed
      */
-    function taskCompleted(
+    function taskResolved(
         address _operator,
         uint256 _fee,
         IStrategy _strategy,

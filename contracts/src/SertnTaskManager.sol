@@ -126,13 +126,9 @@ contract SertnTaskManager is OwnableUpgradeable, ISertnTaskManager {
         }
 
         tasks[taskId].output = output;
+        _updateTaskStateInHistory(taskId, tasks[taskId].state, TaskState.COMPLETED);
         tasks[taskId].state = TaskState.COMPLETED;
         emit TaskCompleted(taskId, task.operator);
-
-        OperatorSet memory operatorSet = allocationManager.getAllocatedSets(task.operator)[0];
-        IStrategy strategy = allocationManager.getAllocatedStrategies(task.operator, operatorSet)[
-            0
-        ];
     }
 
     function challengeTask(uint256 taskId) external onlyAggregators {
@@ -156,8 +152,8 @@ contract SertnTaskManager is OwnableUpgradeable, ISertnTaskManager {
         if (task.state != TaskState.COMPLETED) {
             revert TaskStateIncorrect(TaskState.COMPLETED);
         }
+        _updateTaskStateInHistory(taskId, tasks[taskId].state, TaskState.CHALLENGED);
         tasks[taskId].state = TaskState.CHALLENGED;
-        // TODO: maybe operator address instead of msg.sender?
         emit TaskChallenged(taskId, msg.sender);
     }
 
@@ -175,16 +171,18 @@ contract SertnTaskManager is OwnableUpgradeable, ISertnTaskManager {
         ];
 
         if (success) {
-            sertnServiceManager.taskCompleted(
+            sertnServiceManager.taskResolved(
                 task.operator,
                 task.fee,
                 strategy,
                 task.startTimestamp
             );
+            _updateTaskStateInHistory(task.nonce, task.state, TaskState.RESOLVED);
             tasks[taskId].state = TaskState.RESOLVED;
             emit TaskResolved(taskId, task.operator);
         } else {
             sertnServiceManager.slashOperator(task.operator, task.fee, operatorSet.id, strategy);
+            _updateTaskStateInHistory(task.nonce, task.state, TaskState.REJECTED);
             tasks[taskId].state = TaskState.REJECTED;
             emit TaskRejected(taskId, task.operator);
         }
@@ -438,7 +436,7 @@ contract SertnTaskManager is OwnableUpgradeable, ISertnTaskManager {
      * @param operator The operator address (address(0) for all operators)
      * @param user The user address (address(0) for all users)
      * @return totalTasks Total number of tasks matching criteria
-     * @return completedTasks Number of completed/resolved tasks
+     * @return resolvedTasks Number of completed/resolved tasks
      * @return rejectedTasks Number of rejected tasks
      * @return pendingTasksCount Number of pending/assigned/challenged tasks
      */
@@ -451,7 +449,7 @@ contract SertnTaskManager is OwnableUpgradeable, ISertnTaskManager {
         view
         returns (
             uint256 totalTasks,
-            uint256 completedTasks,
+            uint256 resolvedTasks,
             uint256 rejectedTasks,
             uint256 pendingTasksCount
         )
@@ -471,7 +469,7 @@ contract SertnTaskManager is OwnableUpgradeable, ISertnTaskManager {
 
         // For detailed stats, you would need to iterate through the tasks
         // This is a basic implementation
-        completedTasks = tasksByState[TaskState.RESOLVED].length;
+        resolvedTasks = tasksByState[TaskState.RESOLVED].length;
         rejectedTasks = tasksByState[TaskState.REJECTED].length;
         pendingTasksCount =
             tasksByState[TaskState.ASSIGNED].length +
