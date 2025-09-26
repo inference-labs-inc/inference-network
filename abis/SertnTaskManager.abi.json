@@ -130,23 +130,7 @@
   {
     "type": "function",
     "name": "getTaskHistoryStats",
-    "inputs": [
-      {
-        "name": "modelId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "operator",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "user",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
+    "inputs": [],
     "outputs": [
       {
         "name": "totalTasks",

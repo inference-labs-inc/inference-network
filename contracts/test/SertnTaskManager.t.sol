@@ -670,119 +670,12 @@ contract SertnTaskManagerTest is Test {
             uint256 resolvedTasks,
             uint256 rejectedTasks,
             uint256 pendingTasksCount
-        ) = taskManager.getTaskHistoryStats(0, address(0), address(0));
+        ) = taskManager.getTaskHistoryStats();
 
         assertEq(totalTasks, 3, "Should have 3 total tasks");
         assertEq(resolvedTasks, 1, "Should have 1 resolved task");
         assertEq(rejectedTasks, 1, "Should have 1 rejected task");
         assertEq(pendingTasksCount, 1, "Should have 1 pending task");
-    }
-
-    function test_getTaskHistoryStats_by_model() public {
-        // Create a second model
-        vm.startPrank(owner);
-        uint256 modelId2 = modelRegistry.createNewModel(
-            address(new MockVerifier()),
-            IModelRegistry.VerificationStrategy.Onchain,
-            "test_model_2",
-            200,
-            20
-        );
-        vm.stopPrank();
-
-        // Send tasks for different models
-        ISertnTaskManager.Task memory task1 = _createValidTask();
-        vm.prank(aggregator);
-        taskManager.sendTask(task1); // Model 1
-
-        ISertnTaskManager.Task memory task2 = _createValidTask();
-        task2.modelId = modelId2;
-        task2.nonce = 2;
-        vm.prank(aggregator);
-        taskManager.sendTask(task2); // Model 2
-
-        ISertnTaskManager.Task memory task3 = _createValidTask();
-        task3.nonce = 3;
-        vm.prank(aggregator);
-        taskManager.sendTask(task3); // Model 1
-
-        // Get stats for model 1
-        (uint256 totalTasks, , , ) = taskManager.getTaskHistoryStats(
-            modelId,
-            address(0),
-            address(0)
-        );
-        assertEq(totalTasks, 2, "Model 1 should have 2 total tasks");
-
-        // Get stats for model 2
-        (uint256 totalTasks2, , , ) = taskManager.getTaskHistoryStats(
-            modelId2,
-            address(0),
-            address(0)
-        );
-        assertEq(totalTasks2, 1, "Model 2 should have 1 total task");
-    }
-
-    function test_getTaskHistoryStats_by_operator() public {
-        address operator2 = vm.addr(101);
-
-        // Setup allocation for second operator
-        vm.startPrank(owner);
-        OperatorSet[] memory sets = new OperatorSet[](1);
-        sets[0] = OperatorSet({id: 3, avs: address(0)});
-        mockAllocationManager.setAllocatedSets(operator2, sets);
-
-        IStrategy[] memory strategies = new IStrategy[](1);
-        strategies[0] = mockStrategy;
-        mockAllocationManager.setAllocatedStrategies(operator2, sets[0], strategies);
-        vm.stopPrank();
-
-        // Send tasks for different operators
-        ISertnTaskManager.Task memory task1 = _createValidTask();
-        vm.prank(aggregator);
-        taskManager.sendTask(task1); // Operator 1
-
-        ISertnTaskManager.Task memory task2 = _createValidTask();
-        task2.operator = operator2;
-        task2.nonce = 2;
-        vm.prank(aggregator);
-        taskManager.sendTask(task2); // Operator 2
-
-        // Get stats for operator 1
-        (uint256 totalTasks, , , ) = taskManager.getTaskHistoryStats(0, operator, address(0));
-        assertEq(totalTasks, 1, "Operator 1 should have 1 total task");
-
-        // Get stats for operator 2
-        (uint256 totalTasks2, , , ) = taskManager.getTaskHistoryStats(0, operator2, address(0));
-        assertEq(totalTasks2, 1, "Operator 2 should have 1 total task");
-    }
-
-    function test_getTaskHistoryStats_by_user() public {
-        address user2 = vm.addr(201);
-
-        // Send tasks for different users
-        ISertnTaskManager.Task memory task1 = _createValidTask();
-        vm.prank(aggregator);
-        taskManager.sendTask(task1); // User 1
-
-        ISertnTaskManager.Task memory task2 = _createValidTask();
-        task2.user = user2;
-        task2.nonce = 2;
-        vm.prank(aggregator);
-        taskManager.sendTask(task2); // User 2
-
-        ISertnTaskManager.Task memory task3 = _createValidTask();
-        task3.nonce = 3;
-        vm.prank(aggregator);
-        taskManager.sendTask(task3); // User 1
-
-        // Get stats for user 1
-        (uint256 totalTasks, , , ) = taskManager.getTaskHistoryStats(0, address(0), user);
-        assertEq(totalTasks, 2, "User 1 should have 2 total tasks");
-
-        // Get stats for user 2
-        (uint256 totalTasks2, , , ) = taskManager.getTaskHistoryStats(0, address(0), user2);
-        assertEq(totalTasks2, 1, "User 2 should have 1 total task");
     }
 
     function test_task_history_tracking_on_send() public {

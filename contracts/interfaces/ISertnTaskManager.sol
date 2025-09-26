@@ -177,19 +177,12 @@ interface ISertnTaskManager {
 
     /**
      * @notice Get task history counts for overview statistics
-     * @param modelId The model ID (0 for all models)
-     * @param operator The operator address (address(0) for all operators)
-     * @param user The user address (address(0) for all users)
-     * @return totalTasks Total number of tasks matching criteria
+     * @return totalTasks Total number of tasks
      * @return completedTasks Number of completed/resolved tasks
      * @return rejectedTasks Number of rejected tasks
      * @return pendingTasks Number of pending/assigned/challenged tasks
      */
-    function getTaskHistoryStats(
-        uint256 modelId,
-        address operator,
-        address user
-    )
+    function getTaskHistoryStats()
         external
         view
         returns (

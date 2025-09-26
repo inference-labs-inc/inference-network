@@ -437,19 +437,12 @@ contract SertnTaskManager is OwnableUpgradeable, ISertnTaskManager {
 
     /**
      * @notice Get task history counts for overview statistics
-     * @param modelId The model ID (0 for all models)
-     * @param operator The operator address (address(0) for all operators)
-     * @param user The user address (address(0) for all users)
-     * @return totalTasks Total number of tasks matching criteria
+     * @return totalTasks Total number of tasks
      * @return resolvedTasks Number of completed/resolved tasks
      * @return rejectedTasks Number of rejected tasks
      * @return pendingTasksCount Number of pending/assigned/challenged tasks
      */
-    function getTaskHistoryStats(
-        uint256 modelId,
-        address operator,
-        address user
-    )
+    function getTaskHistoryStats()
         external
         view
         returns (
@@ -459,18 +452,7 @@ contract SertnTaskManager is OwnableUpgradeable, ISertnTaskManager {
             uint256 pendingTasksCount
         )
     {
-        // This is a simplified version - for more complex filtering,
-        // you might need to iterate through tasks or use additional mappings
-        if (modelId > 0) {
-            totalTasks = tasksByModel[modelId].length;
-        } else if (operator != address(0)) {
-            totalTasks = tasksByOperator[operator].length;
-        } else if (user != address(0)) {
-            totalTasks = tasksByUser[user].length;
-        } else {
-            // Global stats
-            totalTasks = taskNonce - 1; // -1 because nonce starts at 1
-        }
+        totalTasks = taskNonce - 1; // -1 because nonce starts at 1
 
         // For detailed stats, you would need to iterate through the tasks
         // This is a basic implementation
