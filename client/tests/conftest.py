@@ -1,12 +1,16 @@
+import asyncio
 import json
 import os
 import shutil
 import sys
 import tempfile
+import threading
+import time
 from pathlib import Path
 
 import pytest
 import requests
+import uvicorn
 from dotenv import load_dotenv
 from eth_account import Account
 from web3 import Web3
@@ -39,6 +43,45 @@ def aggregator():
         auto_update=False,
     )
     return Aggregator(config)
+
+
+@pytest.fixture(scope="session")
+def aggregator_server(aggregator: Aggregator):
+    """Start aggregator server in a separate thread and provide cleanup."""
+    server = None
+    server_thread = None
+
+    def start_server():
+        nonlocal server
+        config = uvicorn.Config(
+            app=aggregator.server.app, host="0.0.0.0", port=8090, log_level="info"
+        )
+        server = uvicorn.Server(config)
+
+        # Run server until stop event is set
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        try:
+            loop.run_until_complete(server.serve())
+        except asyncio.CancelledError:
+            pass
+        finally:
+            loop.close()
+
+    # Start server in a separate thread
+    server_thread = threading.Thread(target=start_server)
+    server_thread.start()
+    time.sleep(5)  # Wait for server to start
+
+    yield aggregator
+
+    # Cleanup - stop server
+    if server:
+        server.should_exit = True
+
+    if server_thread:
+        server_thread.join(timeout=5)  # Wait up to 5 seconds
 
 
 @pytest.fixture(scope="function")

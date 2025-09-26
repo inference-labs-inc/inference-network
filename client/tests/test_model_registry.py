@@ -1,6 +1,7 @@
 import json
 import shutil
 import uuid
+import requests
 
 from common.constants import MODELS_FOLDER
 from models.execution_layer.base_input import BaseInput
@@ -18,6 +19,12 @@ def update_model_metadata(models_root, model_name, **kwargs):
         f.seek(0)
         f.truncate()
         json.dump(metadata, f)
+
+
+def request_models_from_api():
+    resp = requests.get("http://localhost:8090/models")
+    assert resp.status_code == 200
+    return {m["name"]: m for m in resp.json()}
 
 
 def test_load_circuit_input_class(models_root, write_model):
@@ -50,7 +57,7 @@ def test_ensure_external_files(models_root, write_model):
 
 
 def test_sync_models_create_update_disable(
-    models_root, write_model, owner, dummy_address
+    models_root, write_model, owner, dummy_address, aggregator_server
 ):
     try:
         model_registry = ModelRegistry(
@@ -73,9 +80,15 @@ def test_sync_models_create_update_disable(
         write_model(
             models_root, model_name, is_active=True, compute_cost=111, required_fucus=55
         )
+
+        # smoke test `/models` endpoint - new model is not there yet
+        api_models = request_models_from_api()
+        assert model_name not in api_models
+
         # and sync one more time
         model_registry.sync_models()
 
+        # check active models in contract
         active_chain_models = [
             (model_id, model)
             for model_id, model in model_registry._get_blockchain_models().items()
@@ -86,6 +99,12 @@ def test_sync_models_create_update_disable(
         assert model["name"] == model_name
         assert model["compute_cost"] == 111
         assert model["required_fucus"] == 55
+
+        # and now the model should be in the API response
+        api_models = request_models_from_api()
+        assert model_name in api_models
+        assert api_models[model_name]["id"] == model_id
+        assert api_models[model_name]["compute_cost"] == 111
 
         # change the model cost and fucus
         update_model_metadata(
@@ -101,6 +120,11 @@ def test_sync_models_create_update_disable(
         assert model["required_fucus"] == 77
         assert model["verifier"] == dummy_address
 
+        # check that the model is updated in the API response
+        api_models = request_models_from_api()
+        assert api_models[model_name]["id"] == model_id
+        assert api_models[model_name]["compute_cost"] == 222
+
         # disable the model
         update_model_metadata(models_root, model_name, is_active=False)
         model_registry.sync_models()
@@ -111,6 +135,9 @@ def test_sync_models_create_update_disable(
         ]
         assert len(active_chain_models) == 0
 
+        # check the model is not anymore in the API response
+        assert model_name not in request_models_from_api()
+
         # activate the model again
         update_model_metadata(models_root, model_name, is_active=True)
         model_registry.sync_models()
@@ -120,6 +147,8 @@ def test_sync_models_create_update_disable(
             if model["active"]
         ]
         assert len(active_chain_models) == 1
+        # check the model is again in the API response
+        assert model_name in request_models_from_api()
 
         # and again disable it removing the model directory
         shutil.rmtree(models_root / model_name, ignore_errors=True)
@@ -130,6 +159,8 @@ def test_sync_models_create_update_disable(
             if model["active"]
         ]
         assert len(active_chain_models) == 0
+        # and again nothing in the API response
+        assert len(request_models_from_api()) == 0
     finally:
         # set "real" models from "real" models folder back to the chain
         model_registry = ModelRegistry(

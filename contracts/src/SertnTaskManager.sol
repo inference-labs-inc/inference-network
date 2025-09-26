@@ -295,9 +295,9 @@ contract SertnTaskManager is OwnableUpgradeable, ISertnTaskManager {
     /**
      * @notice Internal helper function to paginate an array of task IDs
      * @param taskArray Storage reference to the array to paginate
-     * @param offset Starting index
+     * @param offset Starting index (from the end of array - most recent first)
      * @param limit Maximum number of results
-     * @return Paginated array of task IDs
+     * @return Paginated array of task IDs (most recent first)
      */
     function _paginateTaskIds(
         uint256[] storage taskArray,
@@ -308,15 +308,20 @@ contract SertnTaskManager is OwnableUpgradeable, ISertnTaskManager {
             return new uint256[](0);
         }
 
-        uint256 end = offset + limit;
-        if (end > taskArray.length) {
-            end = taskArray.length;
+        // Calculate how many items we can actually return
+        uint256 availableItems = taskArray.length - offset;
+        uint256 quantityToReturn = limit > availableItems ? availableItems : limit;
+
+        // Calculate start index from the end (most recent first)
+        uint256 startIndex = availableItems - 1;
+
+        uint256[] memory result = new uint256[](quantityToReturn);
+
+        // Fill result array from most recent to oldest
+        for (uint256 i = 0; i < quantityToReturn; i++) {
+            result[i] = taskArray[startIndex - i];
         }
 
-        uint256[] memory result = new uint256[](end - offset);
-        for (uint256 i = offset; i < end; i++) {
-            result[i - offset] = taskArray[i];
-        }
         return result;
     }
 

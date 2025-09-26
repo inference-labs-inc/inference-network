@@ -485,15 +485,15 @@ contract SertnTaskManagerTest is Test {
         // Test pagination - first page (limit 3)
         uint256[] memory page1 = taskManager.getTasksByModel(modelId, 0, 3);
         assertEq(page1.length, 3, "First page should have 3 items");
-        assertEq(page1[0], 1, "First item should be task 1");
-        assertEq(page1[1], 2, "Second item should be task 2");
+        assertEq(page1[0], 5, "First item should be task 5");
+        assertEq(page1[1], 4, "Second item should be task 4");
         assertEq(page1[2], 3, "Third item should be task 3");
 
         // Test pagination - second page (offset 3, limit 3)
         uint256[] memory page2 = taskManager.getTasksByModel(modelId, 3, 3);
         assertEq(page2.length, 2, "Second page should have 2 remaining items");
-        assertEq(page2[0], 4, "First item on page 2 should be task 4");
-        assertEq(page2[1], 5, "Second item on page 2 should be task 5");
+        assertEq(page2[0], 2, "First item on page 2 should be task 2");
+        assertEq(page2[1], 1, "Second item on page 2 should be task 1");
 
         // Test pagination - beyond available data
         uint256[] memory page3 = taskManager.getTasksByModel(modelId, 10, 3);
