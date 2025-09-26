@@ -1,24 +1,26 @@
 import os
 import json
+from pathlib import Path
 
-CLIENT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-ROOT_DIR = os.path.abspath(os.path.join(CLIENT_PATH, ".."))
-CONTRACTS_DIR = os.path.join(ROOT_DIR, "contracts")
-MODELS_DATA_DIR = os.path.join(CLIENT_PATH, "src", "models", "models_data")
-TEMP_FOLDER = os.path.join(CLIENT_PATH, "src", "models", "temp")
-PROOFS_FOLDER = os.path.join(CLIENT_PATH, "src", "models", "generated_proofs")
-MODELS_FOLDER = os.path.join(CLIENT_PATH, "src", "models", "models")
+ROOT_DIR = Path(__file__).parent.parent.parent.parent
+CLIENT_PATH = ROOT_DIR / "client"
+CLIENT_SRC_PATH = CLIENT_PATH / "src"
+CONTRACTS_DIR = ROOT_DIR / "contracts"
+MODELS_DATA_DIR = CLIENT_SRC_PATH / "models" / "models_data"
+TEMP_FOLDER = CLIENT_SRC_PATH / "models" / "temp"
+PROOFS_FOLDER = CLIENT_SRC_PATH / "models" / "generated_proofs"
+MODELS_FOLDER = CLIENT_SRC_PATH / "models" / "models"
 
-LOCAL_EZKL_PATH = os.environ.get(
-    "LOCAL_EZKL_PATH", os.path.join(os.path.expanduser("~"), ".ezkl", "ezkl")
+LOCAL_EZKL_PATH = Path(
+    os.environ.get("LOCAL_EZKL_PATH", str(Path.home() / ".ezkl" / "ezkl"))
 )
 
-os.makedirs(MODELS_DATA_DIR, exist_ok=True)
-os.makedirs(TEMP_FOLDER, exist_ok=True)
-os.makedirs(PROOFS_FOLDER, exist_ok=True)
+MODELS_DATA_DIR.mkdir(parents=True, exist_ok=True)
+TEMP_FOLDER.mkdir(parents=True, exist_ok=True)
+PROOFS_FOLDER.mkdir(parents=True, exist_ok=True)
 
 # contracts addresses:
-with open(os.path.join(CONTRACTS_DIR, "deployments", "sertnDeployment.json")) as f:
+with open(CONTRACTS_DIR / "deployments" / "sertnDeployment.json") as f:
     deployment_info = json.load(f)
     TASK_MANAGER_ADDRESS = deployment_info["sertnTaskManager"]
     SERVICE_MANAGER_ADDRESS = deployment_info["sertnServiceManager"]

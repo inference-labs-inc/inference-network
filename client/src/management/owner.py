@@ -1,17 +1,32 @@
 from eth_account import Account
-from eth_account.datastructures import SignedTransaction
 
 from common.eth import EthereumClient
 from common.config import GasStrategy
+from common.logging import get_logger
+
+logger = get_logger("owner")
+
+
+class ModelValidationError(Exception):
+    """Raised when model validation fails"""
+
+    pass
 
 
 class AvsOwner:
-    def __init__(self, private_key: str, eth_rpc_url: str):
-        self.eth_client = EthereumClient(
-            eth_rpc_url=eth_rpc_url, gas_strategy=GasStrategy.STANDARD
-        )
+    def __init__(
+        self,
+        private_key: str,
+        eth_rpc_url: str,
+        gas_strategy: GasStrategy = GasStrategy.STANDARD,
+    ):
         self.private_key = private_key
         self.owner_address = Account.from_key(self.private_key).address
+        self.gas_strategy = gas_strategy
+        self.eth_rpc_url = eth_rpc_url
+        self.eth_client = EthereumClient(
+            eth_rpc_url=eth_rpc_url, gas_strategy=gas_strategy
+        )
 
     def submit_rewards_for_interval(self, current_interval: int, **gas_kwargs):
         """
@@ -26,5 +41,5 @@ class AvsOwner:
             "submitRewardsForInterval",
             self.private_key,
             [current_interval],
-            **gas_kwargs
+            **gas_kwargs,
         )

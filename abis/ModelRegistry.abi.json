@@ -1,6 +1,19 @@
 [
   {
     "type": "function",
+    "name": "activeModelsLength",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "computeCost",
     "inputs": [
       {
@@ -33,7 +46,7 @@
         "internalType": "enum IModelRegistry.VerificationStrategy"
       },
       {
-        "name": "_modelURI",
+        "name": "_modelName",
         "type": "string",
         "internalType": "string"
       },
@@ -59,10 +72,74 @@
   },
   {
     "type": "function",
+    "name": "disableModel",
+    "inputs": [
+      {
+        "name": "modelId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "getActiveModels",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "ids",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getRandomActiveModel",
+    "inputs": [
+      {
+        "name": "seed",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "initialize",
     "inputs": [],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "isActive",
+    "inputs": [
+      {
+        "name": "modelId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -79,7 +156,7 @@
   },
   {
     "type": "function",
-    "name": "modelURI",
+    "name": "modelName",
     "inputs": [
       {
         "name": "",
@@ -92,6 +169,25 @@
         "name": "",
         "type": "string",
         "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "modelNameToId",
+    "inputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -206,7 +302,7 @@
   },
   {
     "type": "function",
-    "name": "updateModelURI",
+    "name": "updateModelName",
     "inputs": [
       {
         "name": "modelId",
@@ -214,7 +310,7 @@
         "internalType": "uint256"
       },
       {
-        "name": "_modelURI",
+        "name": "_modelName",
         "type": "string",
         "internalType": "string"
       }
@@ -350,7 +446,7 @@
         "internalType": "enum IModelRegistry.VerificationStrategy"
       },
       {
-        "name": "modelURI",
+        "name": "modelName",
         "type": "string",
         "indexed": false,
         "internalType": "string"
@@ -372,7 +468,20 @@
   },
   {
     "type": "event",
-    "name": "ModelURIUpdated",
+    "name": "ModelDisabled",
+    "inputs": [
+      {
+        "name": "modelId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ModelNameUpdated",
     "inputs": [
       {
         "name": "modelId",
@@ -381,7 +490,7 @@
         "internalType": "uint256"
       },
       {
-        "name": "modelURI",
+        "name": "modelName",
         "type": "string",
         "indexed": true,
         "internalType": "string"
@@ -467,6 +576,11 @@
   },
   {
     "type": "error",
+    "name": "InvalidModelName",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidModelVerifier",
     "inputs": []
   },
@@ -484,6 +598,11 @@
   {
     "type": "error",
     "name": "ModelDoesNotExist",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NoActiveModels",
     "inputs": []
   }
 ]

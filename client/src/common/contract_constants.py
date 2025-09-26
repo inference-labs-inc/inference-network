@@ -45,7 +45,7 @@ class TaskStateMap(IntEnum):
             raise ValueError(f"Invalid task state value: {value}")
 
 
-class VerificationStrategiesMap(IntEnum):
+class ContractVerificationStrategy(IntEnum):
     """
     Python representation of `VerificationStrategy` enum.
     """

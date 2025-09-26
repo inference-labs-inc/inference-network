@@ -1,5 +1,3 @@
-import os
-
 import numpy as np
 import onnxruntime as ort
 
@@ -16,12 +14,12 @@ def run_onnx(model_id: str, input_data: list[float]) -> list[float]:
         np.ndarray: The output of the model as a NumPy array.
     """
     # Path to the ONNX model
-    model_path = os.path.join(MODELS_FOLDER, model_id, "network.onnx")
-    if not os.path.exists(model_path):
+    model_path = MODELS_FOLDER / model_id / "network.onnx"
+    if not model_path.exists():
         raise FileNotFoundError(f"Model file not found: {model_path}")
 
     # Load the ONNX model
-    session = ort.InferenceSession(model_path)
+    session = ort.InferenceSession(str(model_path))
 
     # Get input and output names
     input_name = session.get_inputs()[0].name

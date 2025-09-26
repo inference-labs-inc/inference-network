@@ -1,132 +1,22 @@
 import asyncio
-import os
 import threading
 import time
 
-import pytest
-import requests
 import uvicorn
-from dotenv import load_dotenv
-from eth_account import Account
 
 from aggregator.main import Aggregator
 from avs_operator.main import TaskOperator
-from common.config import AggregatorConfig, OperatorConfig
-from common.constants import ROOT_DIR, STRATEGIES_ADDRESSES
+from common.constants import STRATEGIES_ADDRESSES
 from common.contract_constants import TaskStateMap, TaskStructMap
-from owner.main import AvsOwner
-
-load_dotenv(os.path.join(ROOT_DIR, ".env"))  # Load environment variables
+from management.owner import AvsOwner
 
 
 class TestWorkflow:
-    @pytest.fixture(scope="session")
-    def aggregator(self):
-        config = AggregatorConfig(
-            eth_rpc_url="http://localhost:8545",
-            aggregator_server_ip_port_address="localhost:8090",
-            ecdsa_private_key_store_path="tests/keys/aggregator.ecdsa.key.json",
-            proof_request_probability=1.0,  # challenge every task
-        )
-        return Aggregator(config)
-
-    @pytest.fixture(scope="session")
-    def operator(self):
-        config = OperatorConfig(
-            eth_rpc_url="http://localhost:8545",
-            aggregator_server_ip_port_address="localhost:8090",
-            ecdsa_private_key_store_path="tests/keys/operator.ecdsa.key.json",
-            nodes=[
-                {
-                    "node_name": "node1",
-                    "metadata": "optional metadata",
-                    "total_fucus": 100,
-                    "is_active": True,
-                    "models": [
-                        {"model_uri": "model_0", "allocated_fucus": 50},
-                        # {"model_uri": "model_1", "allocated_fucus": 50},
-                    ],
-                },
-                {
-                    "node_name": "node2",
-                    "metadata": "optional metadata",
-                    "total_fucus": 100,
-                    "is_active": True,
-                    "models": [
-                        {"model_uri": "model_0", "allocated_fucus": 90},
-                        # {"model_uri": "model_1", "allocated_fucus": 10},
-                    ],
-                },
-            ],
-        )
-        operator = TaskOperator(config)
-        operator.nodes_manager.sync_nodes()
-        operator.nodes_manager.print_nodes()
-        return operator
-
-    @pytest.fixture(scope="session")
-    def owner(self):
-        return AvsOwner(
-            private_key=os.getenv("PRIVATE_KEY"), eth_rpc_url="http://localhost:8545"
-        )
-
-    @pytest.fixture(scope="function")
-    def init_environment(self, aggregator: Aggregator):
-        """Ensure the Anvil node is running and has the correct state"""
-        # Fast-forward the blockchain to 400 blocks,
-        # because current block number must be greater than MIN_WITHDRAWAL_DELAY_BLOCKS
-        try:
-            requests.post(
-                "http://localhost:8545",
-                json={
-                    "jsonrpc": "2.0",
-                    "method": "anvil_mine",
-                    "params": ["0x190"],
-                    "id": 1,
-                },
-                headers={"Content-Type": "application/json"},
-                timeout=60,  # Set a timeout for the request
-            )
-        except requests.exceptions.ReadTimeout:
-            # Mining 400 blocks can take time, timeout is expected
-            print(
-                "Warning: Mining request timed out, but blocks may still be processing"
-            )
-        # Get the current blockchain timestamp
-        current_block = aggregator.eth_client.w3.eth.get_block("latest")
-        current_timestamp = current_block["timestamp"]
-
-        # Get interval duration once
-        interval_seconds = (
-            aggregator.eth_client.rewards_coordinator.functions.CALCULATION_INTERVAL_SECONDS().call()
-        )
-        init_interval_datetime = (
-            aggregator.eth_client.service_manager.functions.firstIntervalTimestamp().call()
-        )
-
-        # Fast forward time by the interval duration
-        aggregator.eth_client.w3.provider.make_request(
-            "evm_increaseTime",
-            [init_interval_datetime + interval_seconds - current_timestamp + 1],
-        )
-        aggregator.eth_client.w3.provider.make_request("evm_mine", [])
-
-        # Get the owner address from the private key
-        owner_address = Account.from_key(os.getenv("PRIVATE_KEY")).address
-        # Get the current interval and initial operator rewards
-        currentInterval: int = (
-            aggregator.eth_client.service_manager.functions.getCurrentInterval().call()
-        )
-        return {
-            "current_interval": currentInterval,
-            "owner_address": owner_address,
-            "interval_seconds": interval_seconds,
-        }
 
     def start_aggregator_server(self, aggregator: Aggregator):
         self._stop_event = threading.Event()
         config = uvicorn.Config(
-            app=aggregator.app, host="0.0.0.0", port=8090, log_level="info"
+            app=aggregator.server.app, host="0.0.0.0", port=8090, log_level="info"
         )
         self.server = uvicorn.Server(config)
 

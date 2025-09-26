@@ -396,7 +396,7 @@ contract SertnServiceManagerTest is Test {
         );
 
         // Verify model exists
-        assertEq(modelRegistry.modelURI(modelId), "test_model");
+    assertEq(modelRegistry.modelName(modelId), "test_model");
         assertEq(address(serviceManager.modelRegistry()), address(modelRegistry));
 
         vm.stopPrank();
@@ -439,7 +439,7 @@ contract SertnServiceManagerTest is Test {
         // Verify final state
         assertEq(mockToken1.balanceOf(address(serviceManager)), feeAmount);
         assertTrue(serviceManager.isAggregator(aggregator1));
-        assertEq(modelRegistry.modelURI(modelId), "workflow_model");
+    assertEq(modelRegistry.modelName(modelId), "workflow_model");
 
         uint32 currentInterval = serviceManager.getCurrentInterval();
 

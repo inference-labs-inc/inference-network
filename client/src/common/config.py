@@ -33,8 +33,8 @@ class GasStrategy(str, Enum):
 class ModelConfig(BaseModel):
     """Configuration for a model supported by an operator node."""
 
-    model_uri: str = Field(
-        ..., description="URI identifier for the model", min_length=1
+    model_name: str = Field(
+        ..., description="Name identifier for the model", min_length=1
     )
     allocated_fucus: int = Field(
         ..., description="Amount of FUCUs allocated to this model", gt=0
@@ -86,13 +86,13 @@ class BaseConfig(BaseModel):
     ecdsa_private_key_store_path: Path = Field(
         ..., description="Path to ECDSA private key file"
     )
-    aggregator_server_ip_port_address: str = Field(
-        description="Address where aggregator server listens",
-        pattern=r"^[^:]+:\d+$",
-    )
     gas_strategy: GasStrategy = Field(
         default=GasStrategy.STANDARD,
         description="Gas strategy for transaction execution",
+    )
+    auto_update: bool = Field(
+        default=True,
+        description="Enable automatic updates for the application",
     )
 
     @field_validator("ecdsa_private_key_store_path")
@@ -106,6 +106,11 @@ class BaseConfig(BaseModel):
 
 class OperatorConfig(BaseConfig):
     """Configuration for Sertn AVS Operator."""
+
+    aggregator_server_ip_port_address: str = Field(
+        description="Address where aggregator server listens",
+        pattern=r"^[^:]+:\d+$",
+    )
 
     nodes: List[NodeConfig] = Field(
         default_factory=list, description="List of operator nodes"
@@ -131,6 +136,10 @@ class AggregatorConfig(BaseConfig):
         default="ws://localhost:8545",
         description="Ethereum WebSocket URL for event listening",
     )
+    aggregator_server_ip_port_address: str = Field(
+        description="Address where aggregator server listens",
+        pattern=r"^[^:]+:\d+$",
+    )
     proof_request_probability: float = Field(
         default=0.4,
         description="Probability of requesting proofs from operators (0.0 to 1.0)",
@@ -139,15 +148,22 @@ class AggregatorConfig(BaseConfig):
     )
 
 
+class OwnerConfig(BaseConfig):
+    """Configuration for AVS Owner operations."""
+
+    pass
+
+
 def load_config(
-    config_path: Union[str, Path], config_type: Literal["operator", "aggregator"]
-) -> Union[OperatorConfig, AggregatorConfig]:
+    config_path: Union[str, Path],
+    config_type: Literal["operator", "aggregator", "owner"],
+) -> Union[OperatorConfig, AggregatorConfig, OwnerConfig]:
     """
     Load and validate configuration from a YAML file.
 
     Args:
         config_path: Path to the YAML configuration file
-        config_type: Type of configuration to load ("operator" or "aggregator")
+        config_type: Type of configuration to load ("operator", "aggregator", or "owner")
 
     Returns:
         Validated configuration object
@@ -176,6 +192,8 @@ def load_config(
             return OperatorConfig(**config_data)
         elif config_type == "aggregator":
             return AggregatorConfig(**config_data)
+        elif config_type == "owner":
+            return OwnerConfig(**config_data)
         else:
             raise ValueError(f"Unknown config type: {config_type}")
     except Exception as e:

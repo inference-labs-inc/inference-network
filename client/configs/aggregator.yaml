@@ -7,3 +7,4 @@ eth_ws_url: ws://localhost:8545
 # address which the aggregator listens on for operator signed messages
 aggregator_server_ip_port_address: localhost:8090
 ecdsa_private_key_store_path: tests/keys/aggregator.ecdsa.key.json
+auto_update: false

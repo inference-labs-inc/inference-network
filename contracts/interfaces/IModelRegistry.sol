@@ -16,23 +16,23 @@ interface IModelRegistry {
      * @param modelId The id of the model
      * @param modelVerifier The address of the model verifier
      * @param verificationStrategy The strategy used to verify the model
-     * @param modelURI The URI of the model
+     * @param modelName The name of the model (unique)
      * @param computeCost The compute cost of the model
      */
     event ModelCreated(
         uint256 indexed modelId,
         address indexed modelVerifier,
         VerificationStrategy indexed verificationStrategy,
-        string modelURI,
+        string modelName,
         uint256 computeCost,
         uint256 requiredFUCUs
     );
     /**
-     * @notice The event emitted when a model is updated
+     * @notice The event emitted when a model name is updated
      * @param modelId The id of the model
-     * @param modelURI The URI of the model
+     * @param modelName The name of the model (unique)
      */
-    event ModelURIUpdated(uint256 indexed modelId, string indexed modelURI);
+    event ModelNameUpdated(uint256 indexed modelId, string indexed modelName);
     /**
      * @notice The event emitted when the compute cost of a model is updated
      * @param modelId The id of the model
@@ -65,6 +65,12 @@ interface IModelRegistry {
     );
 
     /**
+     * @notice Emitted when a model is disabled (made unusable)
+     * @param modelId The id of the model
+     */
+    event ModelDisabled(uint256 indexed modelId);
+
+    /**
      * @notice The error emitted when a model already exists
      * @param modelId The id of the model
      */
@@ -77,27 +83,35 @@ interface IModelRegistry {
      * @notice The error emitted when a model does not exist
      */
     error ModelDoesNotExist();
+    /**
+     * @notice The error emitted when no active models exist
+     */
+    error NoActiveModels();
+    /**
+     * @notice The error emitted when a model name is empty
+     */
+    error InvalidModelName();
 
     /**
      * @notice The function to create a new model
      * @param modelVerifier The address of the model verifier
      * @param verificationStrategy The strategy used to verify the model
-     * @param modelURI The URI of the model
+     * @param modelName The name of the model (unique)
      */
     function createNewModel(
         address modelVerifier,
         VerificationStrategy verificationStrategy,
-        string memory modelURI,
+        string memory modelName,
         uint256 computeCost,
         uint256 requiredFUCUs
     ) external returns (uint256 modelId);
 
     /**
-     * @notice The function to update the URI of a model
+     * @notice The function to update the name of a model
      * @param modelId The id of the model
-     * @param modelURI The new URI of the model
+     * @param modelName The new name of the model (unique)
      */
-    function updateModelURI(uint256 modelId, string memory modelURI) external;
+    function updateModelName(uint256 modelId, string memory modelName) external;
 
     /**
      * @notice The function to update the compute cost of a model
@@ -129,4 +143,30 @@ interface IModelRegistry {
         uint256 modelId,
         VerificationStrategy verificationStrategy
     ) external;
+
+    /**
+     * @notice Disable a model by clearing its verifier. Disabled models cannot be used by the TaskManager.
+     * @param modelId The id of the model to disable
+     */
+    function disableModel(uint256 modelId) external;
+
+    /**
+     * @notice Get the number of active models
+     */
+    function activeModelsLength() external view returns (uint256);
+
+    /**
+     * @notice Get the full list of active models (use with care for large sets)
+     */
+    function getActiveModels() external view returns (uint256[] memory ids);
+
+    /**
+     * @notice Return a pseudo-random active model id using provided seed
+     */
+    function getRandomActiveModel(uint256 seed) external view returns (uint256);
+
+    /**
+     * @notice Check whether a model is active
+     */
+    function isActive(uint256 modelId) external view returns (bool);
 }

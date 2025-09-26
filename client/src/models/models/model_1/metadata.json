@@ -1,5 +1,5 @@
 {
-  "name": "LSTM",
+  "name": "LSTM test (not working)",
   "description": "Default LSTM benchmarker model.",
   "author": "Inference Labs",
   "version": "0.0.4",
@@ -9,7 +9,8 @@
     "pk.key": "https://storage.omron.ai/96a1315ab963a5a906fb9c7515f60ba386d58310c0ad47bb1049f2dc9b2bdd64/pk.key"
   },
   "verification_strategy": "offchain",
-  "model_verifier_address": "0x18E317A7D70d8fBf8e6E893616b52390EbBdb629",
+  "model_verifier_address": "0x4b6aB5F819A515382B0dEB6935D793817bB4af28",
   "compute_cost": 100,
-  "required_fucus": 50
+  "required_fucus": 50,
+  "is_active": false
 }

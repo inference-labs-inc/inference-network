@@ -105,35 +105,35 @@ contract ModelRegistryTest is Test {
         require(modelId == 1, "First model ID should be 1");
         require(modelId2 == 2, "Second model ID should be 2");
 
-        // Verify model URIs
+        // Verify model names
         require(
-            keccak256(abi.encodePacked(modelRegistry.modelURI(modelId))) ==
+            keccak256(abi.encodePacked(modelRegistry.modelName(modelId))) ==
                 keccak256(abi.encodePacked("model1")),
-            "First model URI should be model1"
+            "First model name should be model1"
         );
 
         require(
-            keccak256(abi.encodePacked(modelRegistry.modelURI(modelId2))) ==
+            keccak256(abi.encodePacked(modelRegistry.modelName(modelId2))) ==
                 keccak256(abi.encodePacked("model2")),
-            "Second model URI should be model2"
+            "Second model name should be model2"
         );
 
         vm.stopPrank();
     }
 
-    function test_updateModelURI() public {
+    function test_updateModelName() public {
         vm.startPrank(owner.key.addr);
 
-        // Update the model URI
+        // Update the model name
         vm.expectEmit(true, true, false, false, address(modelRegistry));
-        emit IModelRegistry.ModelURIUpdated(modelId, "updatedModel1");
-        modelRegistry.updateModelURI(modelId, "updatedModel1");
+        emit IModelRegistry.ModelNameUpdated(modelId, "updatedModel1");
+        modelRegistry.updateModelName(modelId, "updatedModel1");
 
         // Verify the update
         require(
-            keccak256(abi.encodePacked(modelRegistry.modelURI(modelId))) ==
+            keccak256(abi.encodePacked(modelRegistry.modelName(modelId))) ==
                 keccak256(abi.encodePacked("updatedModel1")),
-            "Model URI should be updated to updatedModel1"
+            "Model name should be updated to updatedModel1"
         );
 
         vm.stopPrank();
@@ -204,10 +204,10 @@ contract ModelRegistryTest is Test {
     }
 
     function test_Permissions() public {
-        // Check that only the owner can update model URI
+        // Check that only the owner can update model name
         vm.startPrank(address(0x123));
         vm.expectRevert("Ownable: caller is not the owner");
-        modelRegistry.updateModelURI(modelId, "unauthorizedUpdate");
+        modelRegistry.updateModelName(modelId, "unauthorizedUpdate");
         vm.stopPrank();
 
         // Check that only the owner can update compute cost
@@ -229,6 +229,73 @@ contract ModelRegistryTest is Test {
             modelId,
             IModelRegistry.VerificationStrategy.Onchain
         );
+        vm.stopPrank();
+    }
+
+    function test_activeModelsLifecycle_disable_and_reenable() public {
+        vm.startPrank(owner.key.addr);
+
+        // Initially one active model
+        assertEq(modelRegistry.activeModelsLength(), 1, "Expected 1 active model initially");
+        assertTrue(modelRegistry.isActive(modelId), "Model should be active after creation");
+
+        // Active list includes the model
+        uint256[] memory actives = modelRegistry.getActiveModels();
+        assertEq(actives.length, 1, "Actives length should be 1");
+        assertEq(actives[0], modelId, "Active model id should be modelId");
+
+        // Disable the model
+        vm.expectEmit(true, false, false, false, address(modelRegistry));
+        emit IModelRegistry.ModelDisabled(modelId);
+        modelRegistry.disableModel(modelId);
+
+        assertEq(modelRegistry.activeModelsLength(), 0, "Expected 0 active models after disable");
+        assertFalse(modelRegistry.isActive(modelId), "Model should be inactive after disable");
+
+        // Re-enable by updating verifier to a new address
+        vm.expectEmit(true, true, false, false, address(modelRegistry));
+        emit IModelRegistry.ModelVerifierUpdated(modelId, address(mockVerifier3));
+        modelRegistry.updateModelVerifier(modelId, address(mockVerifier3));
+
+        assertEq(modelRegistry.modelVerifier(modelId), address(mockVerifier3));
+        assertEq(modelRegistry.activeModelsLength(), 1, "Expected 1 active model after re-enable");
+        assertTrue(modelRegistry.isActive(modelId), "Model should be active after re-enable");
+
+        vm.stopPrank();
+    }
+
+    function test_randomActiveModel_and_no_active_revert() public {
+        vm.startPrank(owner.key.addr);
+
+        // Add a second active model for randomness
+        uint256 modelId2 = modelRegistry.createNewModel(
+            address(mockVerifier2),
+            IModelRegistry.VerificationStrategy.Offchain,
+            "model2",
+            200,
+            15
+        );
+        assertEq(modelRegistry.activeModelsLength(), 2, "Two active models expected");
+
+        // getRandomActiveModel should return one of the active ids
+        uint256 pick1 = modelRegistry.getRandomActiveModel(123);
+        uint256 pick2 = modelRegistry.getRandomActiveModel(456);
+        uint256[] memory actives = modelRegistry.getActiveModels();
+        assertTrue(
+            pick1 == actives[0] || pick1 == actives[1],
+            "pick1 should be one of active models"
+        );
+        assertTrue(
+            pick2 == actives[0] || pick2 == actives[1],
+            "pick2 should be one of active models"
+        );
+
+        // Disable all and expect revert
+        modelRegistry.disableModel(modelId);
+        modelRegistry.disableModel(modelId2);
+        vm.expectRevert(abi.encodeWithSelector(IModelRegistry.NoActiveModels.selector));
+        modelRegistry.getRandomActiveModel(789);
+
         vm.stopPrank();
     }
 }

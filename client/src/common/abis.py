@@ -1,11 +1,10 @@
-import os
 import json
 
 from common.constants import ROOT_DIR
 
 
 def load_abi(file_name):
-    with open(os.path.join(ROOT_DIR, "abis", file_name)) as f:
+    with open(ROOT_DIR / "abis" / file_name) as f:
         return json.loads(f.read())
 
 

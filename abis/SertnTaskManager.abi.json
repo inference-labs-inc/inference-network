@@ -40,35 +40,6 @@
   },
   {
     "type": "function",
-    "name": "getAvailableOperators",
-    "inputs": [
-      {
-        "name": "modelId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "requiredFucus",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "availableOperators",
-        "type": "address[]",
-        "internalType": "address[]"
-      },
-      {
-        "name": "availableFucus",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "getPendingTasksIds",
     "inputs": [],
     "outputs": [
@@ -273,30 +244,6 @@
         "name": "",
         "type": "address",
         "internalType": "contract IRewardsCoordinator"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "selectOperatorForModel",
-    "inputs": [
-      {
-        "name": "modelId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "requiredFucus",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "selectedOperator",
-        "type": "address",
-        "internalType": "address"
       }
     ],
     "stateMutability": "view"

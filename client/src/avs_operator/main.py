@@ -12,6 +12,7 @@ from tqdm import tqdm
 from web3 import Web3
 
 from avs_operator.nodes import OperatorNodesManager
+from common.auto_update import AutoUpdate
 from common.config import OperatorConfig
 from common.logging import get_logger
 from common.contract_constants import TaskStructMap
@@ -53,6 +54,7 @@ class TaskOperator:
             eth_client=self.eth_client,
             nodes_config=self.config.nodes,
         )
+        self.auto_update = AutoUpdate()
 
     def listen_for_events(self, loop_running: bool = True) -> int | None:
         logger.info("Starting Operator...")
@@ -81,6 +83,8 @@ class TaskOperator:
             if not loop_running:
                 logger.info("Stopping Operator...")
                 return processed_count
+            if self.config.auto_update:
+                self.auto_update.try_update()
             time.sleep(3)
 
     def process_assigned_task(self, task_id: int, operator_address: bytes):
@@ -99,12 +103,12 @@ class TaskOperator:
         inputs: bytes = task[TaskStructMap.INPUTS]  # bytes inputs
         operator_address: str = task[TaskStructMap.OPERATOR]  # address operator
 
-        model_uri: str = self.eth_client.model_registry.functions.modelURI(
+        model_name: str = self.eth_client.model_registry.functions.modelName(
             model_id
         ).call()
         input_data = [float(i) for i in inputs.decode().split(" ") if i]
         output = run_onnx(
-            model_id=model_uri,
+            model_id=model_name,
             input_data=input_data,
         )
         output_bytes: bytes = json.dumps(output).encode()
@@ -147,7 +151,7 @@ class TaskOperator:
 
         # sign the proof
         encoded = eth_abi.encode(
-            ["uint32", "bytes", "address"],
+            ["uint256", "bytes", "address"],
             [task_id, proof_encoded, operator_address],
         )
         message = encode_defunct(primitive=encoded)
@@ -156,27 +160,28 @@ class TaskOperator:
         )
         signature = signed_message.signature.hex()
         logger.info(
-            f"Signature generated, task_id: {starting_block}, model: {model_id}, "
+            f"Signature generated, task_id: {task_id}, model: {model_id}, "
             f"signature: {signature}",
         )
 
         # send the proof and signature to the aggregator server
-        resp = requests.post(
-            f"http://{self.config.aggregator_server_ip_port_address}/proof",
-            json={
-                "task_id": task_id,
-                "proof": proof,
-                "signature": signature,
-            },
-        )
         try:
+            resp = requests.post(
+                f"http://{self.config.aggregator_server_ip_port_address}/proof",
+                json={
+                    "task_id": task_id,
+                    "proof": proof,
+                    "signature": signature,
+                },
+            )
             resp.raise_for_status()
             logger.info(
                 f"Successfully posted a proof for the {task_id} task",
             )
-        except requests.HTTPError:
-            logger.info(
-                f"Failed to post a proof for the {task_id} task: {resp.text}",
+        except requests.RequestException as e:
+            err_text = e.response.text if getattr(e, "response", None) else str(e)
+            logger.warning(
+                f"Failed to post a proof for the {task_id} task: {err_text}",
             )
 
     def generate_proof_for_task(
@@ -186,11 +191,11 @@ class TaskOperator:
         Generate proof for the task with the given task_id.
         """
         # generate proof for the task
-        model_uri: str = self.eth_client.model_registry.functions.modelURI(
+        model_name: str = self.eth_client.model_registry.functions.modelName(
             model_id
         ).call()
         proof_generator = EZKLHandler(
-            model_id=model_uri,
+            model_id=model_name,
             task_id=str(task_id),
             inputs=[float(i) for i in inputs.decode().split(" ")],
         )

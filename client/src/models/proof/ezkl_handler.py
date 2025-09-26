@@ -8,11 +8,9 @@ from typing import Optional, Iterable
 import ezkl
 
 from common.logging import get_logger
-from common.constants import MODELS_FOLDER, PROOFS_FOLDER
+from common.constants import MODELS_FOLDER, PROOFS_FOLDER, LOCAL_EZKL_PATH
 
 logger = get_logger("models")
-
-LOCAL_EZKL_PATH = os.path.join(os.path.expanduser("~"), ".ezkl", "ezkl")
 
 
 class EZKLInputType(Enum):
@@ -33,18 +31,18 @@ class EZKLHandler:
     def __init__(self, model_id: str, task_id: str, inputs: Optional[list[float]]):
         self.input_data = inputs
 
-        model_path = os.path.join(MODELS_FOLDER, f"{model_id}")
-        self.compiled_model_path = os.path.join(model_path, "model.compiled")
-        self.pk_path = os.path.join(model_path, "pk.key")  # TODO: ...
-        self.vk_path = os.path.join(model_path, "vk.key")
-        self.settings_path = os.path.join(model_path, "settings.json")
+        model_path = MODELS_FOLDER / model_id
+        self.compiled_model_path = model_path / "model.compiled"
+        self.pk_path = model_path / "pk.key"  # TODO: ...
+        self.vk_path = model_path / "vk.key"
+        self.settings_path = model_path / "settings.json"
         self.settings = json.load(open(self.settings_path, "r", encoding="utf-8"))
 
-        self.proof_dir = os.path.join(PROOFS_FOLDER, task_id)
-        os.makedirs(self.proof_dir, exist_ok=True)
-        self.input_path = os.path.join(self.proof_dir, "inputs.json")
-        self.witness_path = os.path.join(self.proof_dir, "witness.json")
-        self.proof_filepath = os.path.join(self.proof_dir, "proof.json")
+        self.proof_dir = PROOFS_FOLDER / task_id
+        self.proof_dir.mkdir(parents=True, exist_ok=True)
+        self.input_path = self.proof_dir / "inputs.json"
+        self.witness_path = self.proof_dir / "witness.json"
+        self.proof_filepath = self.proof_dir / "proof.json"
 
     def gen_input_file(self):
         logger.info("Generating input file")
@@ -53,7 +51,7 @@ class EZKLHandler:
         else:
             input_data = self.input_data.to_array()
         data = {"input_data": [input_data]}
-        os.makedirs(os.path.dirname(self.input_path), exist_ok=True)
+        self.input_path.parent.mkdir(parents=True, exist_ok=True)
         with open(self.input_path, "w", encoding="utf-8") as f:
             json.dump(data, f)
         logger.info(f"Generated input.json with data: {data}")
@@ -67,16 +65,16 @@ class EZKLHandler:
 
             result = subprocess.run(
                 [
-                    LOCAL_EZKL_PATH,
+                    str(LOCAL_EZKL_PATH),
                     "prove",
                     "--witness",
-                    self.witness_path,
+                    str(self.witness_path),
                     "--compiled-circuit",
-                    self.compiled_model_path,
+                    str(self.compiled_model_path),
                     "--pk-path",
-                    self.pk_path,
+                    str(self.pk_path),
                     "--proof-path",
-                    self.proof_filepath,
+                    str(self.proof_filepath),
                 ],
                 check=True,
                 capture_output=True,
@@ -122,14 +120,14 @@ class EZKLHandler:
         try:
             result = subprocess.run(
                 [
-                    LOCAL_EZKL_PATH,
+                    str(LOCAL_EZKL_PATH),
                     "verify",
                     "--settings-path",
-                    self.settings_path,
+                    str(self.settings_path),
                     "--proof-path",
-                    self.proof_filepath,
+                    str(self.proof_filepath),
                     "--vk-path",
-                    self.vk_path,
+                    str(self.vk_path),
                 ],
                 check=True,
                 capture_output=True,
@@ -148,16 +146,16 @@ class EZKLHandler:
 
         result = subprocess.run(
             [
-                LOCAL_EZKL_PATH,
+                str(LOCAL_EZKL_PATH),
                 "gen-witness",
                 "--data",
-                self.input_path,
+                str(self.input_path),
                 "--compiled-circuit",
-                self.compiled_model_path,
+                str(self.compiled_model_path),
                 "--output",
-                self.witness_path,
+                str(self.witness_path),
                 "--vk-path",
-                self.vk_path,
+                str(self.vk_path),
             ],
             check=True,
             capture_output=True,

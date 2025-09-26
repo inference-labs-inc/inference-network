@@ -291,6 +291,12 @@ contract InitLocalEnvScript is Script {
             _registerAggregator();
             _createModel("model_0", 1, 10);
             // _createModel("model_1", 2, 15);
+            MockVerifier model2MockVerifier = new MockVerifier();
+            console.log("Spare Verifier address 1:", address(model2MockVerifier));
+            MockVerifier model3MockVerifier = new MockVerifier();
+            console.log("Spare Verifier address 2:", address(model3MockVerifier));
+            MockVerifier model4MockVerifier = new MockVerifier();
+            console.log("Spare Verifier address 3:", address(model4MockVerifier));
         }
 
         vm.stopBroadcast();

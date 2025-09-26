@@ -463,9 +463,9 @@ contract RegisterOperatorToAVS2 is AVSSetup2 {
 
     //     require(modelId == 0, "Model ID should be 0");
 
-    //     modelRegistry.updateModelURI(modelId, "model1_updated");
+    //     modelRegistry.updateModelName(modelId, "model1_updated");
     //     require(
-    //         keccak256(abi.encodePacked(modelRegistry.modelURI(modelId))) ==
+    //         keccak256(abi.encodePacked(modelRegistry.modelName(modelId))) ==
     //             keccak256(abi.encodePacked("model1_updated")),
     //         "Model URI should be updated"
     //     );
@@ -654,7 +654,7 @@ contract RegisterOperatorToAVS2 is AVSSetup2 {
     // function _addModel(
     //     address _modelVerifier,
     //     VerificationStrategy _verificationStrategy,
-    //     string memory _modelURI,
+    //     string memory _modelName,
     //     uint256 _computeCost
     // ) internal {
     //     sertnServiceManager.addModels(_operatorModels);
