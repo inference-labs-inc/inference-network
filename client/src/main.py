@@ -10,8 +10,8 @@ from management import manage_app
 from models.execution_layer.model_registry import ensure_external_files
 
 app = typer.Typer(
-    name="sertn",
-    help="Sertn AVS Client",
+    name="inference",
+    help="Inference AVS Client",
     add_completion=False,
 )
 
@@ -50,7 +50,7 @@ def start(
     setup_logging(verbose=verbose, log_file=log_file)
     logger = get_logger()
 
-    logger.debug(f"Starting Sertn in {mode} mode...")
+    logger.debug(f"Starting Inference in {mode} mode...")
 
     if not config:
         logger.error("Config file path is required. Use --config to specify the path.")

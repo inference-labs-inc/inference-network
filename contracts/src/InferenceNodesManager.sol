@@ -7,8 +7,8 @@ import {IDelegationManager} from "@eigenlayer/contracts/interfaces/IDelegationMa
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {IRewardsCoordinator} from "@eigenlayer/contracts/interfaces/IRewardsCoordinator.sol";
-import {ISertnTaskManager} from "../interfaces/ISertnTaskManager.sol";
-import {ISertnNodesManager} from "../interfaces/ISertnNodesManager.sol";
+import {IInferenceTaskManager} from "../interfaces/IInferenceTaskManager.sol";
+import {IInferenceNodesManager} from "../interfaces/IInferenceNodesManager.sol";
 import {IStrategy} from "@eigenlayer/contracts/interfaces/IStrategy.sol";
 import {IVerifier} from "../interfaces/IVerifier.sol";
 import {IModelRegistry} from "../interfaces/IModelRegistry.sol";
@@ -18,18 +18,18 @@ import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transpa
 import {OperatorSet} from "@eigenlayer/contracts/libraries/OperatorSetLib.sol";
 
 /**
- * @title SertnNodesManager
+ * @title InferenceNodesManager
  * @author Inference Labs, Inc.
- * @notice SertnNodesManager is a contract that manages nodes in the Sertn network.
+ * @notice InferenceNodesManager is a contract that manages nodes in the Inference network.
  */
-contract SertnNodesManager is OwnableUpgradeable, ISertnNodesManager {
+contract InferenceNodesManager is OwnableUpgradeable, IInferenceNodesManager {
     using EnumerableSet for EnumerableSet.UintSet;
     using EnumerableSet for EnumerableSet.AddressSet;
 
     // ============ STATE VARIABLES ============
     // Core contracts
     IDelegationManager public delegationManager;
-    ISertnTaskManager public sertnTaskManager;
+    IInferenceTaskManager public inferenceTaskManager;
     ModelRegistry public modelRegistry;
 
     // Node management
@@ -79,19 +79,19 @@ contract SertnNodesManager is OwnableUpgradeable, ISertnNodesManager {
 
     function initialize(
         address _delegationManager,
-        address _sertnTaskManager,
+        address _inferenceTaskManager,
         address _modelRegistry
     ) public initializer {
         __Ownable_init();
         if (
             _delegationManager == address(0) ||
-            _sertnTaskManager == address(0) ||
+            _inferenceTaskManager == address(0) ||
             _modelRegistry == address(0)
         ) {
             revert ZeroAddress();
         }
         delegationManager = IDelegationManager(_delegationManager);
-        sertnTaskManager = ISertnTaskManager(_sertnTaskManager);
+        inferenceTaskManager = IInferenceTaskManager(_inferenceTaskManager);
         modelRegistry = ModelRegistry(_modelRegistry);
         nextNodeId = 1;
     }
@@ -287,7 +287,7 @@ contract SertnNodesManager is OwnableUpgradeable, ISertnNodesManager {
         uint256 requiredFucus
     ) external validModel(modelId) returns (bool success) {
         // Only task manager should be able to allocate FUCUs
-        if (msg.sender != address(sertnTaskManager)) {
+        if (msg.sender != address(inferenceTaskManager)) {
             revert OnlyTaskManager();
         }
 
@@ -312,7 +312,7 @@ contract SertnNodesManager is OwnableUpgradeable, ISertnNodesManager {
         uint256 fucusToRelease
     ) external {
         // Only task manager should be able to release FUCUs
-        if (msg.sender != address(sertnTaskManager)) {
+        if (msg.sender != address(inferenceTaskManager)) {
             revert OnlyTaskManager();
         }
 

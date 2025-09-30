@@ -53,7 +53,7 @@ def sync_models(
     in the ModelRegistry contract.
 
     Example:
-        sertn manage sync-models --config config.yaml --verbose
+        inference manage sync-models --config config.yaml --verbose
     """
     setup_logging(verbose=verbose, log_file=log_file)
 
@@ -123,7 +123,7 @@ def submit_rewards(
     This command submits rewards to the service manager for the given interval.
 
     Example:
-        sertn manage submit-rewards --config config.yaml --interval 5
+        inference manage submit-rewards --config config.yaml --interval 5
     """
     setup_logging(verbose=verbose, log_file=log_file)
     logger = get_logger("submit-rewards")

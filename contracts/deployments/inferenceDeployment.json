@@ -1,0 +1,12 @@
+{
+    "allocationManager": "0xc0F115A19107322cFBf1cDBC7ea011C19EbDB4F8",
+    "eth_strategy_0": "0x2F2f161281f393837cf30a89E4BD18f38Dc07418",
+    "eth_strategy_1": "0x5B494da05Fe18De2Fb15393360625D9FC4BcA5EF",
+    "inferenceRegistrar": "0x638A246F0Ec8883eF68280293FFE8Cfbabe61B44",
+    "inferenceServiceManager": "0x01c1DeF3b91672704716159C9041Aeca392DdFfb",
+    "inferenceTaskManager": "0x6C2d83262fF84cBaDb3e416D527403135D757892",
+    "rewardsCoordinator": "0x276C216D241856199A83bf27b2286659e5b877D3",
+    "strategy_0": "0xe49cBA398a07F4918620D142E6Fee0D3070234b0",
+    "strategy_1": "0x2F2f161281f393837cf30a89E4BD18f38Dc07418",
+    "strategy_2": "0x5B494da05Fe18De2Fb15393360625D9FC4BcA5EF"
+}

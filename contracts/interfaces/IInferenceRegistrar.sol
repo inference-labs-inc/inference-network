@@ -3,4 +3,4 @@ pragma solidity ^0.8.29;
 
 import {IAVSRegistrar} from "../lib/eigenlayer-contracts/src/contracts/interfaces/IAVSRegistrar.sol";
 
-interface ISertnRegistrar is IAVSRegistrar {}
+interface IInferenceRegistrar is IAVSRegistrar {}

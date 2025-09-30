@@ -31,7 +31,7 @@ logger = get_logger("aggregator")
 
 
 def run_aggregator(config: AggregatorConfig) -> None:
-    logger.info("Starting Sertn Aggregator...")
+    logger.info("Starting Inference Aggregator...")
     aggregator = Aggregator(config=config)
     threading.Thread(target=aggregator.start_sending_new_tasks, args=[]).start()
     threading.Thread(target=aggregator.listen_for_events, args=[]).start()

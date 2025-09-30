@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.29;
 
-import {ISertnTaskManager} from "./ISertnTaskManager.sol";
+import {IInferenceTaskManager} from "./IInferenceTaskManager.sol";
 
 /**
- * @title ISertnAggregator
+ * @title IInferenceAggregator
  * @author Inference Labs, Inc.
- * @notice Interface for the Aggregators within Sertn
+ * @notice Interface for the Aggregators within Inference
  */
-interface ISertnAggregator {
+interface IInferenceAggregator {
     /**
      * @notice Thrown when the EOA signature is invalid
      */
@@ -31,10 +31,7 @@ interface ISertnAggregator {
      * @param _task The task to submit
      * @param _proof The proof of the task signed by aggregatorEOA
      */
-    function submitTask(
-        ISertnTaskManager.Task memory _task,
-        bytes memory _proof
-    ) external;
+    function submitTask(IInferenceTaskManager.Task memory _task, bytes memory _proof) external;
 
     /**
      * @notice Updates the Aggregator EOA
@@ -43,8 +40,8 @@ interface ISertnAggregator {
     function updateAggregatorEOA(address _aggregatorEOA) external;
 
     /**
-     * @notice Updates the SertnTaskManager contract address
-     * @param _sertnTaskManager The new SertnTaskManager contract address
+     * @notice Updates the InferenceTaskManager contract address
+     * @param _inferenceTaskManager The new InferenceTaskManager contract address
      */
-    function updateSertnTaskManager(address _sertnTaskManager) external;
+    function updateInferenceTaskManager(address _inferenceTaskManager) external;
 }

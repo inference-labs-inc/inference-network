@@ -52,7 +52,7 @@ jobs:
       - name: Output URLs
         if: steps.deploy.outputs.serviceManager != ''
         run: |
-          echo "Sertn AVS URL: https://holesky.eigenlayer.xyz/avs/${{ steps.deploy.outputs.serviceManager }}"
+          echo "Inference AVS URL: https://holesky.eigenlayer.xyz/avs/${{ steps.deploy.outputs.serviceManager }}"
 
       - name: Output Error
         if: steps.deploy.outputs.serviceManager == ''

@@ -4,7 +4,7 @@ import {IStrategy} from "../lib/eigenlayer-contracts/src/contracts/interfaces/IS
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Initializable} from "@openzeppelin-upgradeable/contracts/proxy/utils/Initializable.sol";
 
-interface ISertnServiceManager {
+interface IInferenceServiceManager {
     /// @notice Thrown when the caller is not an aggregator
     error NotAggregator();
 
@@ -24,9 +24,9 @@ interface ISertnServiceManager {
 
     /**
      * @notice Update the task manager
-     * @param _sertnTaskManager The address of the task manager to update to
+     * @param _inferenceTaskManager The address of the task manager to update to
      */
-    function updateTaskManager(address _sertnTaskManager) external;
+    function updateTaskManager(address _inferenceTaskManager) external;
 
     /**
      * @notice Pull fee from a user

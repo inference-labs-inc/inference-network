@@ -1,7 +1,7 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/ubuntu
 {
-  "name": "Sertn Dev",
+  "name": "Inference Dev",
   // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
   // Built from https://github.com/inference-labs-inc/tensor-tools/blob/main/bittensor-devcontainer/Dockerfile
   // "image": "ghcr.io/inference-labs-inc/bittensor-devcontainer:latest",

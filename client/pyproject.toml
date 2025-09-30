@@ -1,7 +1,7 @@
 [project]
-name = "sertn-avs"
+name = "inference-network"
 version = "0.1.0"
-description = "Sertn AVS Client"
+description = "Inference Network Client"
 authors = []
 requires-python = ">=3.10,<3.13"
 dependencies = [
@@ -43,7 +43,7 @@ addopts = "-v"
 pythonpath = ["src"]
 
 [project.scripts]
-sertn = "main:app"
+inference = "main:app"
 
 [tool.uv.sources]
 torch = { index = "pytorch" }

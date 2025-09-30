@@ -7,7 +7,7 @@ import {IModelRegistry} from "../interfaces/IModelRegistry.sol";
 /**
  * @title ModelRegistry
  * @author Inference Labs, Inc.
- * @notice ModelRegistry is a contract that stores models for the Sertn network.
+ * @notice ModelRegistry is a contract that stores models for the Inference network.
  */
 contract ModelRegistry is OwnableUpgradeable, IModelRegistry {
     using EnumerableSet for EnumerableSet.UintSet;

@@ -2,7 +2,7 @@
 Pydantic models for model metadata configuration.
 
 This module provides Pydantic models for validating model metadata JSON files
-used in the Sertn AVS system.
+used in the Inference Network system.
 """
 
 import json

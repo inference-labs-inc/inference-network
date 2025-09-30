@@ -3,22 +3,22 @@ pragma solidity ^0.8.29;
 
 import {Test, console2 as console} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
-import {SertnNodesManager} from "../src/SertnNodesManager.sol";
+import {InferenceNodesManager} from "../src/InferenceNodesManager.sol";
 import {ModelRegistry} from "../src/ModelRegistry.sol";
-import {ISertnNodesManager} from "../interfaces/ISertnNodesManager.sol";
+import {IInferenceNodesManager} from "../interfaces/IInferenceNodesManager.sol";
 import {IModelRegistry} from "../interfaces/IModelRegistry.sol";
 import {DelegationManagerMock} from "./mockContracts/DelegationManagerMock.sol";
-import {MockSertnTaskManager} from "./mockContracts/SertnTaskManagerMock.sol";
+import {MockInferenceTaskManager} from "./mockContracts/InferenceTaskManagerMock.sol";
 import {MockVerifier} from "./mockContracts/VerifierMock.sol";
 import {MockVerifier2} from "./mockContracts/VerifierMock2.sol";
 
-contract SertnNodesManagerTest is Test {
+contract InferenceNodesManagerTest is Test {
     Vm.Wallet internal owner;
     Vm.Wallet internal operator1;
     Vm.Wallet internal operator2;
-    MockSertnTaskManager internal taskManager;
+    MockInferenceTaskManager internal taskManager;
 
-    SertnNodesManager nodesManager;
+    InferenceNodesManager nodesManager;
     ModelRegistry modelRegistry;
     DelegationManagerMock delegationManager;
     MockVerifier mockVerifier;
@@ -33,13 +33,13 @@ contract SertnNodesManagerTest is Test {
     uint256 constant MODEL_FUCUS = 500;
 
     function setUp() public {
-        console.log("SertnNodesManagerTest setUp");
+        console.log("InferenceNodesManagerTest setUp");
 
         // Create test users
         owner = vm.createWallet("owner_wallet");
         operator1 = vm.createWallet("operator1_wallet");
         operator2 = vm.createWallet("operator2_wallet");
-        taskManager = new MockSertnTaskManager();
+        taskManager = new MockInferenceTaskManager();
 
         // Deploy mock contracts as owner
         vm.startPrank(owner.addr);
@@ -76,7 +76,7 @@ contract SertnNodesManagerTest is Test {
         );
 
         // Deploy nodes manager
-        nodesManager = new SertnNodesManager();
+        nodesManager = new InferenceNodesManager();
         nodesManager.initialize(
             address(delegationManager),
             address(taskManager),
@@ -92,7 +92,7 @@ contract SertnNodesManagerTest is Test {
         vm.startPrank(operator1.addr);
 
         vm.expectEmit(true, true, false, true);
-        emit ISertnNodesManager.NodeRegistered(1, operator1.addr, NODE_NAME, NODE_FUCUS);
+        emit IInferenceNodesManager.NodeRegistered(1, operator1.addr, NODE_NAME, NODE_FUCUS);
 
         uint256 nodeId = nodesManager.registerNode(NODE_NAME, "", NODE_FUCUS);
 
@@ -127,7 +127,7 @@ contract SertnNodesManagerTest is Test {
 
     function testRegisterNodeWithZeroFucus() public {
         vm.prank(operator1.addr);
-        vm.expectRevert(ISertnNodesManager.InvalidFucusAmount.selector);
+        vm.expectRevert(IInferenceNodesManager.InvalidFucusAmount.selector);
         nodesManager.registerNode(NODE_NAME, "", 0);
     }
 
@@ -152,7 +152,7 @@ contract SertnNodesManagerTest is Test {
     function testRegisterNodeNotOperator() public {
         vm.prank(owner.addr); // not operator
 
-        vm.expectRevert(abi.encodeWithSelector(ISertnNodesManager.NotNodeOperator.selector, 0));
+        vm.expectRevert(abi.encodeWithSelector(IInferenceNodesManager.NotNodeOperator.selector, 0));
         nodesManager.registerNode(NODE_NAME, "", NODE_FUCUS);
     }
 
@@ -168,7 +168,7 @@ contract SertnNodesManagerTest is Test {
         uint256 newFucus = 2000;
 
         vm.expectEmit(true, false, false, true);
-        emit ISertnNodesManager.NodeUpdated(nodeId, newName, newMetadata);
+        emit IInferenceNodesManager.NodeUpdated(nodeId, newName, newMetadata);
 
         nodesManager.updateNode(nodeId, newName, newMetadata, newFucus);
 
@@ -198,14 +198,16 @@ contract SertnNodesManagerTest is Test {
 
         vm.prank(operator2.addr);
         vm.expectRevert(
-            abi.encodeWithSelector(ISertnNodesManager.NotNodeOperator.selector, nodeId)
+            abi.encodeWithSelector(IInferenceNodesManager.NotNodeOperator.selector, nodeId)
         );
         nodesManager.updateNode(nodeId, "New Name", "new metadata", 1500);
     }
 
     function testUpdateNonexistentNode() public {
         vm.prank(operator1.addr);
-        vm.expectRevert(abi.encodeWithSelector(ISertnNodesManager.NodeDoesNotExist.selector, 999));
+        vm.expectRevert(
+            abi.encodeWithSelector(IInferenceNodesManager.NodeDoesNotExist.selector, 999)
+        );
         nodesManager.updateNode(999, "New Name", "new metadata", 1500);
     }
 
@@ -219,7 +221,7 @@ contract SertnNodesManagerTest is Test {
         // Try to update with too low Fucus for running the model
         vm.expectRevert(
             abi.encodeWithSelector(
-                ISertnNodesManager.InsufficientFucus.selector,
+                IInferenceNodesManager.InsufficientFucus.selector,
                 MODEL_FUCUS - 1,
                 MODEL_FUCUS
             )
@@ -238,7 +240,7 @@ contract SertnNodesManagerTest is Test {
 
         // Deactivation
         vm.expectEmit(true, true, false, false);
-        emit ISertnNodesManager.NodeDeactivated(nodeId, operator1.addr);
+        emit IInferenceNodesManager.NodeDeactivated(nodeId, operator1.addr);
 
         nodesManager.deactivateNode(nodeId);
 
@@ -247,7 +249,7 @@ contract SertnNodesManagerTest is Test {
 
         // Activation again
         vm.expectEmit(true, true, false, false);
-        emit ISertnNodesManager.NodeReactivated(nodeId, operator1.addr);
+        emit IInferenceNodesManager.NodeReactivated(nodeId, operator1.addr);
 
         nodesManager.reactivateNode(nodeId);
 
@@ -265,13 +267,13 @@ contract SertnNodesManagerTest is Test {
 
         // trying to deactivate
         vm.expectRevert(
-            abi.encodeWithSelector(ISertnNodesManager.NotNodeOperator.selector, nodeId)
+            abi.encodeWithSelector(IInferenceNodesManager.NotNodeOperator.selector, nodeId)
         );
         nodesManager.deactivateNode(nodeId);
 
         // trying to reactivate
         vm.expectRevert(
-            abi.encodeWithSelector(ISertnNodesManager.NotNodeOperator.selector, nodeId)
+            abi.encodeWithSelector(IInferenceNodesManager.NotNodeOperator.selector, nodeId)
         );
         nodesManager.reactivateNode(nodeId);
         vm.stopPrank();
@@ -285,12 +287,12 @@ contract SertnNodesManagerTest is Test {
         uint256 nodeId = nodesManager.registerNode(NODE_NAME, "", NODE_FUCUS);
 
         vm.expectEmit(true, true, false, false);
-        emit ISertnNodesManager.NodeRemoved(nodeId, operator1.addr);
+        emit IInferenceNodesManager.NodeRemoved(nodeId, operator1.addr);
 
         nodesManager.removeNode(nodeId);
 
         vm.expectRevert(
-            abi.encodeWithSelector(ISertnNodesManager.NodeDoesNotExist.selector, nodeId)
+            abi.encodeWithSelector(IInferenceNodesManager.NodeDoesNotExist.selector, nodeId)
         );
         nodesManager.getNodeDetails(nodeId);
 
@@ -307,7 +309,7 @@ contract SertnNodesManagerTest is Test {
         vm.prank(operator2.addr); // not correct operator
 
         vm.expectRevert(
-            abi.encodeWithSelector(ISertnNodesManager.NotNodeOperator.selector, nodeId)
+            abi.encodeWithSelector(IInferenceNodesManager.NotNodeOperator.selector, nodeId)
         );
         nodesManager.removeNode(nodeId);
     }
@@ -334,7 +336,9 @@ contract SertnNodesManagerTest is Test {
 
     function testRemoveNonExistentNode() public {
         vm.prank(operator1.addr);
-        vm.expectRevert(abi.encodeWithSelector(ISertnNodesManager.NodeDoesNotExist.selector, 999));
+        vm.expectRevert(
+            abi.encodeWithSelector(IInferenceNodesManager.NodeDoesNotExist.selector, 999)
+        );
         nodesManager.removeNode(999);
     }
 
@@ -346,7 +350,7 @@ contract SertnNodesManagerTest is Test {
         uint256 nodeId = nodesManager.registerNode(NODE_NAME, "", NODE_FUCUS);
 
         vm.expectEmit(true, true, false, true);
-        emit ISertnNodesManager.ModelSupportAdded(nodeId, modelId1, MODEL_FUCUS);
+        emit IInferenceNodesManager.ModelSupportAdded(nodeId, modelId1, MODEL_FUCUS);
 
         nodesManager.addModelSupport(nodeId, modelId1, MODEL_FUCUS);
 
@@ -371,7 +375,9 @@ contract SertnNodesManagerTest is Test {
 
         uint256 nodeId = nodesManager.registerNode(NODE_NAME, "", NODE_FUCUS);
 
-        vm.expectRevert(abi.encodeWithSelector(ISertnNodesManager.InvalidModelId.selector, 999));
+        vm.expectRevert(
+            abi.encodeWithSelector(IInferenceNodesManager.InvalidModelId.selector, 999)
+        );
         nodesManager.addModelSupport(nodeId, 999, MODEL_FUCUS);
 
         vm.stopPrank();
@@ -382,7 +388,7 @@ contract SertnNodesManagerTest is Test {
 
         uint256 nodeId = nodesManager.registerNode(NODE_NAME, "", NODE_FUCUS);
 
-        vm.expectRevert(ISertnNodesManager.InvalidFucusAmount.selector);
+        vm.expectRevert(IInferenceNodesManager.InvalidFucusAmount.selector);
         nodesManager.addModelSupport(nodeId, modelId1, 0);
 
         vm.stopPrank();
@@ -395,7 +401,7 @@ contract SertnNodesManagerTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                ISertnNodesManager.InsufficientFucus.selector,
+                IInferenceNodesManager.InsufficientFucus.selector,
                 NODE_FUCUS + 1,
                 NODE_FUCUS
             )
@@ -413,7 +419,7 @@ contract SertnNodesManagerTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                ISertnNodesManager.ModelAlreadySupported.selector,
+                IInferenceNodesManager.ModelAlreadySupported.selector,
                 nodeId,
                 modelId1
             )
@@ -430,7 +436,7 @@ contract SertnNodesManagerTest is Test {
         nodesManager.addModelSupport(nodeId, modelId1, MODEL_FUCUS);
 
         vm.expectEmit(true, true, false, false);
-        emit ISertnNodesManager.ModelSupportRemoved(nodeId, modelId1);
+        emit IInferenceNodesManager.ModelSupportRemoved(nodeId, modelId1);
 
         nodesManager.removeModelSupport(nodeId, modelId1);
 
@@ -450,7 +456,11 @@ contract SertnNodesManagerTest is Test {
         uint256 nodeId = nodesManager.registerNode(NODE_NAME, "", NODE_FUCUS);
 
         vm.expectRevert(
-            abi.encodeWithSelector(ISertnNodesManager.ModelNotSupported.selector, nodeId, modelId1)
+            abi.encodeWithSelector(
+                IInferenceNodesManager.ModelNotSupported.selector,
+                nodeId,
+                modelId1
+            )
         );
         nodesManager.removeModelSupport(nodeId, modelId1);
 
@@ -465,7 +475,7 @@ contract SertnNodesManagerTest is Test {
 
         uint256 newFucus = 300;
         vm.expectEmit(true, true, false, true);
-        emit ISertnNodesManager.ModelSupportUpdated(nodeId, modelId1, newFucus);
+        emit IInferenceNodesManager.ModelSupportUpdated(nodeId, modelId1, newFucus);
 
         nodesManager.updateModelSupport(nodeId, modelId1, newFucus);
 
@@ -481,7 +491,11 @@ contract SertnNodesManagerTest is Test {
         uint256 nodeId = nodesManager.registerNode(NODE_NAME, "", NODE_FUCUS);
 
         vm.expectRevert(
-            abi.encodeWithSelector(ISertnNodesManager.ModelNotSupported.selector, nodeId, modelId1)
+            abi.encodeWithSelector(
+                IInferenceNodesManager.ModelNotSupported.selector,
+                nodeId,
+                modelId1
+            )
         );
         nodesManager.updateModelSupport(nodeId, modelId1, 300);
 
@@ -494,7 +508,7 @@ contract SertnNodesManagerTest is Test {
         uint256 nodeId = nodesManager.registerNode(NODE_NAME, "", NODE_FUCUS);
         nodesManager.addModelSupport(nodeId, modelId1, MODEL_FUCUS);
 
-        vm.expectRevert(ISertnNodesManager.InvalidFucusAmount.selector);
+        vm.expectRevert(IInferenceNodesManager.InvalidFucusAmount.selector);
         nodesManager.updateModelSupport(nodeId, modelId1, 0);
 
         vm.stopPrank();
@@ -512,7 +526,7 @@ contract SertnNodesManagerTest is Test {
         // Test allocation from task manager
         vm.prank(address(taskManager));
         vm.expectEmit(true, true, false, true);
-        emit ISertnNodesManager.FucusAllocated(operator1.addr, modelId1, 100);
+        emit IInferenceNodesManager.FucusAllocated(operator1.addr, modelId1, 100);
 
         bool success = nodesManager.allocateFucusForTask(operator1.addr, modelId1, 100);
         assertTrue(success);
@@ -542,7 +556,7 @@ contract SertnNodesManagerTest is Test {
         nodesManager.addModelSupport(nodeId, modelId1, MODEL_FUCUS);
 
         vm.prank(operator2.addr);
-        vm.expectRevert(ISertnNodesManager.OnlyTaskManager.selector);
+        vm.expectRevert(IInferenceNodesManager.OnlyTaskManager.selector);
         nodesManager.allocateFucusForTask(operator1.addr, modelId1, 100);
     }
 
@@ -558,7 +572,7 @@ contract SertnNodesManagerTest is Test {
         // Test release
         vm.prank(address(taskManager));
         vm.expectEmit(true, true, false, true);
-        emit ISertnNodesManager.FucusReleased(operator1.addr, modelId1, 100);
+        emit IInferenceNodesManager.FucusReleased(operator1.addr, modelId1, 100);
 
         nodesManager.releaseFucusForTask(operator1.addr, modelId1, 100);
 

@@ -5,12 +5,12 @@ import {IAVSRegistrar} from "@eigenlayer/contracts/interfaces/IAVSRegistrar.sol"
 import {OwnableUpgradeable} from "@openzeppelin-upgrades/contracts/access/OwnableUpgradeable.sol";
 
 /**
- * @title SertnRegistrar
+ * @title InferenceRegistrar
  * @author Inference Labs, Inc.
- * @notice SertnRegistrar is a contract that allows operators to register to operate on the Sertn network.
+ * @notice InferenceRegistrar is a contract that allows operators to register to operate on the Inference network.
  */
-contract SertnRegistrar is IAVSRegistrar, OwnableUpgradeable {
-    // The address of the AVS contract (SertnServiceManager)
+contract InferenceRegistrar is IAVSRegistrar, OwnableUpgradeable {
+    // The address of the AVS contract (InferenceServiceManager)
     address public avsAddress;
 
     /**

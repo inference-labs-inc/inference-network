@@ -2,9 +2,9 @@ name: Tests
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   test:
@@ -14,81 +14,81 @@ jobs:
         python-version: ["3.10"]
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Cache UV packages
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cache/uv
-          .venv
-        key: ${{ runner.os }}-uv-${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml') }}
-        restore-keys: |
-          ${{ runner.os }}-uv-${{ matrix.python-version }}-
+      - name: Cache UV packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            .venv
+          key: ${{ runner.os }}-uv-${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-${{ matrix.python-version }}-
 
-    - name: Install uv
-      run: |
-        curl -LsSf https://astral.sh/uv/install.sh | sh
-        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-    - name: Install dependencies
-      working-directory: ./client
-      run: |
-        uv venv
-        source .venv/bin/activate
-        uv pip install -e ".[test]"
+      - name: Install dependencies
+        working-directory: ./client
+        run: |
+          uv venv
+          source .venv/bin/activate
+          uv pip install -e ".[test]"
 
-    - name: Install Foundry
-      uses: foundry-rs/foundry-toolchain@v1
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
 
-    - name: Create .env file
-      run: cp .env.example .env
+      - name: Create .env file
+        run: cp .env.example .env
 
-    - name: Build contracts
-      run: make build-contracts
+      - name: Build contracts
+        run: make build-contracts
 
-    - name: Run foundry tests
-      working-directory: ./contracts/test
-      run: forge test
+      - name: Run foundry tests
+        working-directory: ./contracts/test
+        run: forge test
 
-    - name: Install ezkl
-      env: 
-        EZKL_DIR: /home/runner/.ezkl
-      run: curl https://raw.githubusercontent.com/zkonduit/ezkl/main/install_ezkl_cli.sh | bash -s v22.0.1
-      continue-on-error: true
+      - name: Install ezkl
+        env:
+          EZKL_DIR: /home/runner/.ezkl
+        run: curl https://raw.githubusercontent.com/zkonduit/ezkl/main/install_ezkl_cli.sh | bash -s v22.0.1
+        continue-on-error: true
 
-    - name: Check ezkl version
-      run: /home/runner/.ezkl/ezkl --version
+      - name: Check ezkl version
+        run: /home/runner/.ezkl/ezkl --version
 
-    - name: Generate srs file
-      working-directory: /home/runner/.ezkl
-      run: |
-        mkdir -p srs 
-        /home/runner/.ezkl/ezkl gen-srs --logrows 19 --srs-path srs/kzg19.srs
+      - name: Generate srs file
+        working-directory: /home/runner/.ezkl
+        run: |
+          mkdir -p srs
+          /home/runner/.ezkl/ezkl gen-srs --logrows 19 --srs-path srs/kzg19.srs
 
-    - name: Generate pk.key with ezkl setup
-      working-directory: ./client/src/models/models/model_0
-      run: /home/runner/.ezkl/ezkl setup
+      - name: Generate pk.key with ezkl setup
+        working-directory: ./client/src/models/models/model_0
+        run: /home/runner/.ezkl/ezkl setup
 
-    - name: Start anvil local blockchain
-      run: make start-anvil-background
+      - name: Start anvil local blockchain
+        run: make start-anvil-background
 
-    - name: Deploy eigenlayer contracts
-      run: make deploy-eigenlayer-contracts
+      - name: Deploy eigenlayer contracts
+        run: make deploy-eigenlayer-contracts
 
-    - name: Deploy sertn contracts
-      run: make deploy-sertn-contracts
+      - name: Deploy inference contracts
+        run: make deploy-inference-contracts
 
-    - name: Init local workers
-      run: make init-local-workers
+      - name: Init local workers
+        run: make init-local-workers
 
-    - name: Run tests
-      run: make test-client
+      - name: Run tests
+        run: make test-client
 
-    - name: Stop anvil local blockchain
-      run: make stop-anvil
+      - name: Stop anvil local blockchain
+        run: make stop-anvil

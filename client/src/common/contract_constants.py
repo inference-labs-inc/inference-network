@@ -3,8 +3,8 @@ from enum import IntEnum
 
 class TaskStructMap(IntEnum):
     """
-    Task model representation, declared in `contracts/interfaces/ISertnTaskManager.sol`
-    Basically it's just a fields order in the `ISertnTaskManager.Task` struct.
+    Task model representation, declared in `contracts/interfaces/IInferenceTaskManager.sol`
+    Basically it's just a fields order in the `IInferenceTaskManager.Task` struct.
     """
 
     START_BLOCK = 0
@@ -22,8 +22,8 @@ class TaskStructMap(IntEnum):
 
 class TaskStateMap(IntEnum):
     """
-    Python representation for task states, declared in `contracts/interfaces/ISertnTaskManager.sol`
-    `ISertnTaskManager.TaskState`
+    Python representation for task states, declared in `contracts/interfaces/IInferenceTaskManager.sol`
+    `IInferenceTaskManager.TaskState`
     """
 
     CREATED = 0

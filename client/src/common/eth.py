@@ -12,7 +12,7 @@ from common.abis import (
     DELEGATION_MANAGER_ABI,
     MODEL_REGISTRY_ABI,
     REWARDS_COORDINATOR_ABI,
-    SERTN_NODES_MANAGER_ABI,
+    INFERENCE_NODES_MANAGER_ABI,
     SERVICE_MANAGER_ABI,
     STRATEGY_MANAGER_ABI,
     TASK_MANAGER_ABI,
@@ -117,10 +117,10 @@ class EthereumClient:
             abi=REWARDS_COORDINATOR_ABI,
         )
         self.check_contract_deployed(self.rewards_coordinator.address)
-        # Sertn nodes manager
+        # Inference nodes manager
         self.nodes_manager = self.w3.eth.contract(
-            address=self.task_manager.functions.sertnNodesManager().call(),
-            abi=SERTN_NODES_MANAGER_ABI,
+            address=self.task_manager.functions.inferenceNodesManager().call(),
+            abi=INFERENCE_NODES_MANAGER_ABI,
         )
         self.check_contract_deployed(self.nodes_manager.address)
 

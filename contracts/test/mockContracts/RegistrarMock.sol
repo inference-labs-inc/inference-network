@@ -1,20 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.12;
 
-import {ISertnRegistrar} from "../../interfaces/ISertnRegistrar.sol";
+import {IInferenceRegistrar} from "../../interfaces/IInferenceRegistrar.sol";
 
-contract MockAVSRegistrar is ISertnRegistrar {
+contract MockAVSRegistrar is IInferenceRegistrar {
     event OperatorRegistered(
         address operator,
         address avsIdentifier,
         uint32[] operatorSetIds,
         bytes data
     );
-    event OperatorDeregistered(
-        address operator,
-        address avsIdentifier,
-        uint32[] operatorSetIds
-    );
+    event OperatorDeregistered(address operator, address avsIdentifier, uint32[] operatorSetIds);
 
     function registerOperator(
         address operator,

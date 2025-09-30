@@ -9,14 +9,14 @@
 // import {Vm} from "forge-std/Vm.sol";
 // import {stdJson} from "forge-std/StdJson.sol";
 // import {ECDSAStakeRegistry} from "@eigenlayer-middleware/src/unaudited/ECDSAStakeRegistry.sol";
-// import {SertnServiceManager} from "../../src/SertnServiceManager.sol";
+// import {InferenceServiceManager} from "../../src/InferenceServiceManager.sol";
 // import {IDelegationManager} from "@eigenlayer/contracts/interfaces/IDelegationManager.sol";
 // import {IECDSAStakeRegistryTypes} from "@eigenlayer-middleware/src/interfaces/IECDSAStakeRegistry.sol";
 // import {UpgradeableProxyLib} from "./UpgradeableProxyLib.sol";
 // import {CoreDeploymentLib} from "./CoreDeploymentLib.sol";
 // import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
-// library SertnDeploymentLib {
+// library InferenceDeploymentLib {
 //     using stdJson for *;
 //     using Strings for *;
 //     using UpgradeableProxyLib for address;
@@ -24,7 +24,7 @@
 //     Vm internal constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
 //     struct DeploymentData {
-//         address sertnServiceManager;
+//         address inferenceServiceManager;
 //         address stakeRegistry;
 //         address strategy;
 //         address token;
@@ -47,12 +47,12 @@
 //         DeploymentData memory result;
 
 //         // First, deploy upgradeable proxy contracts that will point to the implementations.
-//         result.sertnServiceManager = UpgradeableProxyLib.setUpEmptyProxy(proxyAdmin);
+//         result.inferenceServiceManager = UpgradeableProxyLib.setUpEmptyProxy(proxyAdmin);
 //         // Deploy the implementation contracts, using the proxy contracts as inputs
 //         address stakeRegistryImpl =
 //             address(new ECDSAStakeRegistry(IDelegationManager(core.delegationManager)));
-//         address sertnServiceManagerImpl = address(
-//             new SertnServiceManager(
+//         address inferenceServiceManagerImpl = address(
+//             new InferenceServiceManager(
 //                 core.rewardsCoordinator,
 //                 core.delegationManager,
 //                 core.allocationManager
@@ -60,12 +60,12 @@
 //         );
 //         // Upgrade contracts
 //         bytes memory upgradeCall = abi.encodeCall(
-//             ECDSAStakeRegistry.initialize, (result.sertnServiceManager, 0, quorum)
+//             ECDSAStakeRegistry.initialize, (result.inferenceServiceManager, 0, quorum)
 //         );
 //         UpgradeableProxyLib.upgradeAndCall(result.stakeRegistry, stakeRegistryImpl, upgradeCall);
-//         upgradeCall = abi.encodeCall(SertnServiceManager.initialize, (owner, rewardsInitiator));
+//         upgradeCall = abi.encodeCall(InferenceServiceManager.initialize, (owner, rewardsInitiator));
 //         UpgradeableProxyLib.upgradeAndCall(
-//             result.sertnServiceManager, sertnServiceManagerImpl, upgradeCall
+//             result.inferenceServiceManager, inferenceServiceManagerImpl, upgradeCall
 //         );
 
 //         return result;
@@ -83,13 +83,13 @@
 //     ) internal view returns (DeploymentData memory) {
 //         string memory fileName = string.concat(directoryPath, vm.toString(chainId), ".json");
 
-//         require(vm.exists(fileName), "SertnDeployment: Deployment file does not exist");
+//         require(vm.exists(fileName), "InferenceDeployment: Deployment file does not exist");
 
 //         string memory json = vm.readFile(fileName);
 
 //         DeploymentData memory data;
 //         /// TODO: 2 Step for reading deployment json.  Read to the core and the AVS data
-//         data.sertnServiceManager = json.readAddress(".addresses.sertnServiceManager");
+//         data.inferenceServiceManager = json.readAddress(".addresses.inferenceServiceManager");
 //         data.stakeRegistry = json.readAddress(".addresses.stakeRegistry");
 //         data.strategy = json.readAddress(".addresses.strategy");
 //         data.token = json.readAddress(".addresses.token");
@@ -101,7 +101,7 @@
 //     function writeDeploymentJson(
 //         DeploymentData memory data
 //     ) internal {
-//         writeDeploymentJson("deployments/sertn/", block.chainid, data);
+//         writeDeploymentJson("deployments/inference/", block.chainid, data);
 //     }
 
 //     function writeDeploymentJson(
@@ -110,7 +110,7 @@
 //         DeploymentData memory data
 //     ) internal {
 //         address proxyAdmin =
-//             address(UpgradeableProxyLib.getProxyAdmin(data.sertnServiceManager));
+//             address(UpgradeableProxyLib.getProxyAdmin(data.inferenceServiceManager));
 
 //         string memory deploymentData = _generateDeploymentJson(data, proxyAdmin);
 
@@ -130,7 +130,7 @@
 //         string memory pathToFile = string.concat(directoryPath, fileName);
 
 //         require(
-//             vm.exists(pathToFile), "SertnDeployment: Deployment Config file does not exist"
+//             vm.exists(pathToFile), "InferenceDeployment: Deployment Config file does not exist"
 //         );
 
 //         string memory json = vm.readFile(pathToFile);
@@ -173,10 +173,10 @@
 //         return string.concat(
 //             '{"proxyAdmin":"',
 //             proxyAdmin.toHexString(),
-//             '","sertnServiceManager":"',
-//             data.sertnServiceManager.toHexString(),
-//             '","sertnServiceManagerImpl":"',
-//             data.sertnServiceManager.getImplementation().toHexString(),
+//             '","inferenceServiceManager":"',
+//             data.inferenceServiceManager.toHexString(),
+//             '","inferenceServiceManagerImpl":"',
+//             data.inferenceServiceManager.getImplementation().toHexString(),
 //             '","stakeRegistry":"',
 //             data.stakeRegistry.toHexString(),
 //             '","stakeRegistryImpl":"',

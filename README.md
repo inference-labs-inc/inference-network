@@ -1,4 +1,4 @@
-# SERTN AVS
+# INFERENCE NETWORK
 
 ## Project Structure
 
@@ -40,7 +40,7 @@ uv pip install -e .
 ```bash
 make build-contracts
 make deploy-eigenlayer-contracts
-make deploy-sertn-contracts
+make deploy-inference-contracts
 ```
 
 ### Running the Services
@@ -49,7 +49,7 @@ The operator and aggregator services can be managed through the CLI:
 
 ```bash
 # From the client directory with venv activated
-sertn --help
+inference --help
 ```
 
 ### Development

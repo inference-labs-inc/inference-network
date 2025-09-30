@@ -9,16 +9,16 @@ import {StrategyBase} from "@eigenlayer/contracts/strategies/StrategyBase.sol";
 import {IStrategyManager} from "@eigenlayer/contracts/interfaces/IStrategyManager.sol";
 import {IStrategy} from "@eigenlayer/contracts/interfaces/IStrategy.sol";
 import "@eigenlayer/contracts/libraries/OperatorSetLib.sol";
-import {SertnTaskManager} from "../src/SertnTaskManager.sol";
-import {ISertnTaskManager} from "../interfaces/ISertnTaskManager.sol";
-import {ISertnServiceManager} from "../interfaces/ISertnServiceManager.sol";
+import {InferenceTaskManager} from "../src/InferenceTaskManager.sol";
+import {IInferenceTaskManager} from "../interfaces/IInferenceTaskManager.sol";
+import {IInferenceServiceManager} from "../interfaces/IInferenceServiceManager.sol";
 import {ModelRegistry} from "../src/ModelRegistry.sol";
 import {IModelRegistry} from "../interfaces/IModelRegistry.sol";
 import {MockVerifier} from "./mockContracts/VerifierMock.sol";
 import {MockAllocationManager} from "./mockContracts/AllocationManagerMock.sol";
 import {MockPauserRegistry} from "./mockContracts/PauserRegistryMock.sol";
-import {MockSertnServiceManager} from "./mockContracts/SertnServiceManagerMock.sol";
-import {SertnNodesManagerMock} from "./mockContracts/SertnNodesManagerMock.sol";
+import {MockInferenceServiceManager} from "./mockContracts/InferenceServiceManagerMock.sol";
+import {InferenceNodesManagerMock} from "./mockContracts/InferenceNodesManagerMock.sol";
 import {ERC20Mock} from "./mockContracts/ERC20Mock.sol";
 
 import {Test, console2 as console} from "forge-std/Test.sol";
@@ -31,13 +31,13 @@ contract MockRewardsCoordinator {
     // Empty implementation
 }
 
-contract SertnTaskManagerTest is Test {
-    SertnTaskManager taskManager;
+contract InferenceTaskManagerTest is Test {
+    InferenceTaskManager taskManager;
     MockAllocationManager mockAllocationManager;
     MockDelegationManager mockDelegationManager;
     MockRewardsCoordinator mockRewardsCoordinator;
-    MockSertnServiceManager mockServiceManager;
-    SertnNodesManagerMock mockNodesManager;
+    MockInferenceServiceManager mockServiceManager;
+    InferenceNodesManagerMock mockNodesManager;
     ModelRegistry modelRegistry;
     MockVerifier mockVerifier;
     ERC20Mock mockToken;
@@ -58,8 +58,8 @@ contract SertnTaskManagerTest is Test {
         mockAllocationManager = new MockAllocationManager();
         mockDelegationManager = new MockDelegationManager();
         mockRewardsCoordinator = new MockRewardsCoordinator();
-        mockServiceManager = new MockSertnServiceManager();
-        mockNodesManager = new SertnNodesManagerMock();
+        mockServiceManager = new MockInferenceServiceManager();
+        mockNodesManager = new InferenceNodesManagerMock();
         mockToken = new ERC20Mock();
         mockStrategy = new StrategyBase(
             IStrategyManager(address(0)),
@@ -84,7 +84,7 @@ contract SertnTaskManagerTest is Test {
         );
 
         // Deploy and initialize TaskManager
-        taskManager = new SertnTaskManager();
+        taskManager = new InferenceTaskManager();
         taskManager.initialize(
             address(mockRewardsCoordinator),
             address(mockDelegationManager),
@@ -113,7 +113,7 @@ contract SertnTaskManagerTest is Test {
         assertEq(address(taskManager.allocationManager()), address(mockAllocationManager));
         assertEq(address(taskManager.delegationManager()), address(mockDelegationManager));
         assertEq(address(taskManager.rewardsCoordinator()), address(mockRewardsCoordinator));
-        assertEq(address(taskManager.sertnServiceManager()), address(mockServiceManager));
+        assertEq(address(taskManager.inferenceServiceManager()), address(mockServiceManager));
         assertEq(address(taskManager.modelRegistry()), address(modelRegistry));
         assertEq(taskManager.taskNonce(), 1); // Starts at 1
     }
@@ -121,13 +121,13 @@ contract SertnTaskManagerTest is Test {
     function test_sendTask_success() public {
         assertEq(taskManager.getPendingTasksIds().length, 0);
 
-        ISertnTaskManager.Task memory task = _createValidTask();
+        IInferenceTaskManager.Task memory task = _createValidTask();
 
         vm.expectEmit(true, true, false, true);
-        emit ISertnTaskManager.TaskCreated(task.nonce, user);
+        emit IInferenceTaskManager.TaskCreated(task.nonce, user);
 
         vm.expectEmit(true, true, false, true);
-        emit ISertnTaskManager.TaskAssigned(task.nonce, operator);
+        emit IInferenceTaskManager.TaskAssigned(task.nonce, operator);
 
         vm.prank(aggregator);
         taskManager.sendTask(task);
@@ -138,77 +138,77 @@ contract SertnTaskManagerTest is Test {
         expected_ids[0] = task.nonce;
         assertEq(taskManager.getPendingTasksIds(), expected_ids);
 
-        ISertnTaskManager.Task memory storedTask = taskManager.getTask(task.nonce);
-        assertEq(uint8(storedTask.state), uint8(ISertnTaskManager.TaskState.ASSIGNED));
+        IInferenceTaskManager.Task memory storedTask = taskManager.getTask(task.nonce);
+        assertEq(uint8(storedTask.state), uint8(IInferenceTaskManager.TaskState.ASSIGNED));
         assertEq(storedTask.operator, operator);
         assertEq(storedTask.user, user);
         assertEq(storedTask.modelId, modelId);
     }
 
     function test_sendTask_revertNotAggregator() public {
-        ISertnTaskManager.Task memory task = _createValidTask();
+        IInferenceTaskManager.Task memory task = _createValidTask();
 
-        vm.expectRevert(ISertnTaskManager.NotAggregator.selector);
+        vm.expectRevert(IInferenceTaskManager.NotAggregator.selector);
         vm.prank(nonAggregator);
         taskManager.sendTask(task);
     }
 
     function test_sendTask_revertInvalidModelId() public {
-        ISertnTaskManager.Task memory task = _createValidTask();
+        IInferenceTaskManager.Task memory task = _createValidTask();
         task.modelId = 999; // Invalid model ID
 
-        vm.expectRevert(ISertnTaskManager.InvalidModelId.selector);
+        vm.expectRevert(IInferenceTaskManager.InvalidModelId.selector);
         vm.prank(aggregator);
         taskManager.sendTask(task);
     }
 
     function test_getTask_revertTaskDoesNotExist() public {
-        vm.expectRevert(ISertnTaskManager.TaskDoesNotExist.selector);
+        vm.expectRevert(IInferenceTaskManager.TaskDoesNotExist.selector);
         taskManager.getTask(999);
     }
 
     function test_submitTaskOutput_success() public {
         // First send a task
-        ISertnTaskManager.Task memory task = _createValidTask();
+        IInferenceTaskManager.Task memory task = _createValidTask();
         vm.prank(aggregator);
         taskManager.sendTask(task);
 
         bytes memory output = "test output";
 
         vm.expectEmit(true, true, false, true);
-        emit ISertnTaskManager.TaskCompleted(task.nonce, operator);
+        emit IInferenceTaskManager.TaskCompleted(task.nonce, operator);
 
         vm.prank(operator);
         taskManager.submitTaskOutput(task.nonce, output);
 
         assertEq(
             uint8(taskManager.getTask(task.nonce).state),
-            uint8(ISertnTaskManager.TaskState.COMPLETED)
+            uint8(IInferenceTaskManager.TaskState.COMPLETED)
         );
         assertEq(taskManager.getTask(task.nonce).output, output);
     }
 
     function test_submitTaskOutput_revertTaskDoesNotExist() public {
-        vm.expectRevert(ISertnTaskManager.TaskDoesNotExist.selector);
+        vm.expectRevert(IInferenceTaskManager.TaskDoesNotExist.selector);
         vm.prank(operator);
         taskManager.submitTaskOutput(999, "output");
     }
 
     function test_submitTaskOutput_revertNotAssignedToTask() public {
         // Send a task assigned to operator
-        ISertnTaskManager.Task memory task = _createValidTask();
+        IInferenceTaskManager.Task memory task = _createValidTask();
         vm.prank(aggregator);
         taskManager.sendTask(task);
 
         // Try to submit output from different address
-        vm.expectRevert(ISertnTaskManager.NotAssignedToTask.selector);
+        vm.expectRevert(IInferenceTaskManager.NotAssignedToTask.selector);
         vm.prank(user);
         taskManager.submitTaskOutput(0, "output");
     }
 
     function test_submitTaskOutput_revertTaskStateIncorrect() public {
         // Send and complete a task
-        ISertnTaskManager.Task memory task = _createValidTask();
+        IInferenceTaskManager.Task memory task = _createValidTask();
         vm.prank(aggregator);
         taskManager.sendTask(task);
 
@@ -218,8 +218,8 @@ contract SertnTaskManagerTest is Test {
         // Try to submit output again
         vm.expectRevert(
             abi.encodeWithSelector(
-                ISertnTaskManager.TaskStateIncorrect.selector,
-                ISertnTaskManager.TaskState.COMPLETED
+                IInferenceTaskManager.TaskStateIncorrect.selector,
+                IInferenceTaskManager.TaskState.COMPLETED
             )
         );
         vm.prank(operator);
@@ -228,7 +228,7 @@ contract SertnTaskManagerTest is Test {
 
     function test_challengeTask_success() public {
         // Send and complete a task
-        ISertnTaskManager.Task memory task = _createValidTask();
+        IInferenceTaskManager.Task memory task = _createValidTask();
         vm.prank(aggregator);
         taskManager.sendTask(task);
 
@@ -236,27 +236,27 @@ contract SertnTaskManagerTest is Test {
         taskManager.submitTaskOutput(1, "output");
 
         vm.expectEmit(true, true, false, true);
-        emit ISertnTaskManager.TaskChallenged(1, aggregator);
+        emit IInferenceTaskManager.TaskChallenged(1, aggregator);
 
         vm.prank(aggregator);
         taskManager.challengeTask(1);
     }
 
     function test_challengeTask_revertNotAggregator() public {
-        vm.expectRevert(ISertnTaskManager.NotAggregator.selector);
+        vm.expectRevert(IInferenceTaskManager.NotAggregator.selector);
         vm.prank(nonAggregator);
         taskManager.challengeTask(0);
     }
 
     function test_challengeTask_revertTaskDoesNotExist() public {
-        vm.expectRevert(ISertnTaskManager.TaskDoesNotExist.selector);
+        vm.expectRevert(IInferenceTaskManager.TaskDoesNotExist.selector);
         vm.prank(aggregator);
         taskManager.challengeTask(999);
     }
 
     function test_submitProofForTask_success() public {
         // Send, complete, and challenge a task
-        ISertnTaskManager.Task memory task = _createValidTask();
+        IInferenceTaskManager.Task memory task = _createValidTask();
         vm.prank(aggregator);
         taskManager.sendTask(task);
 
@@ -269,26 +269,26 @@ contract SertnTaskManagerTest is Test {
         bytes memory proof = bytes("1");
 
         vm.expectEmit(true, false, false, true);
-        emit ISertnTaskManager.ProofSubmitted(task.nonce, keccak256(proof));
+        emit IInferenceTaskManager.ProofSubmitted(task.nonce, keccak256(proof));
 
         vm.prank(operator);
         taskManager.submitProofForTask(task.nonce, proof);
 
         assertEq(
             uint8(taskManager.getTask(task.nonce).state),
-            uint8(ISertnTaskManager.TaskState.RESOLVED)
+            uint8(IInferenceTaskManager.TaskState.RESOLVED)
         );
     }
 
     function test_submitProofForTask_revertTaskDoesNotExist() public {
-        vm.expectRevert(ISertnTaskManager.TaskDoesNotExist.selector);
+        vm.expectRevert(IInferenceTaskManager.TaskDoesNotExist.selector);
         vm.prank(operator);
         taskManager.submitProofForTask(999, "proof");
     }
 
     function test_submitProofForTask_revertNotAssignedToTask() public {
         // Send, complete, and challenge a task
-        ISertnTaskManager.Task memory task = _createValidTask();
+        IInferenceTaskManager.Task memory task = _createValidTask();
         vm.prank(aggregator);
         taskManager.sendTask(task);
 
@@ -298,14 +298,14 @@ contract SertnTaskManagerTest is Test {
         vm.prank(aggregator);
         taskManager.challengeTask(task.nonce);
 
-        vm.expectRevert(ISertnTaskManager.NotAssignedToTask.selector);
+        vm.expectRevert(IInferenceTaskManager.NotAssignedToTask.selector);
         vm.prank(user);
         taskManager.submitProofForTask(task.nonce, "proof");
     }
 
     function test_submitProofForTask_revertTaskStateIncorrect() public {
         // Send a task but don't challenge it
-        ISertnTaskManager.Task memory task = _createValidTask();
+        IInferenceTaskManager.Task memory task = _createValidTask();
         vm.prank(aggregator);
         taskManager.sendTask(task);
 
@@ -314,8 +314,8 @@ contract SertnTaskManagerTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                ISertnTaskManager.TaskStateIncorrect.selector,
-                ISertnTaskManager.TaskState.CHALLENGED
+                IInferenceTaskManager.TaskStateIncorrect.selector,
+                IInferenceTaskManager.TaskState.CHALLENGED
             )
         );
         vm.prank(operator);
@@ -324,7 +324,7 @@ contract SertnTaskManagerTest is Test {
 
     function test_resolveTask_success() public {
         // Send, complete, and challenge a task
-        ISertnTaskManager.Task memory task = _createValidTask();
+        IInferenceTaskManager.Task memory task = _createValidTask();
         vm.prank(aggregator);
         taskManager.sendTask(task);
 
@@ -340,7 +340,7 @@ contract SertnTaskManagerTest is Test {
         assertEq(taskManager.getPendingTasksIds(), expected_ids);
 
         vm.expectEmit(true, true, false, true);
-        emit ISertnTaskManager.TaskResolved(task.nonce, operator);
+        emit IInferenceTaskManager.TaskResolved(task.nonce, operator);
 
         vm.prank(aggregator);
         taskManager.resolveTask(task.nonce, true);
@@ -350,13 +350,13 @@ contract SertnTaskManagerTest is Test {
 
         assertEq(
             uint8(taskManager.getTask(task.nonce).state),
-            uint8(ISertnTaskManager.TaskState.RESOLVED)
+            uint8(IInferenceTaskManager.TaskState.RESOLVED)
         );
     }
 
     function test_resolveTask_reject() public {
         // Send, complete, and challenge a task
-        ISertnTaskManager.Task memory task = _createValidTask();
+        IInferenceTaskManager.Task memory task = _createValidTask();
         vm.prank(aggregator);
         taskManager.sendTask(task);
 
@@ -372,14 +372,14 @@ contract SertnTaskManagerTest is Test {
         assertEq(taskManager.getPendingTasksIds(), expected_ids);
 
         vm.expectEmit(true, true, false, true);
-        emit ISertnTaskManager.TaskRejected(task.nonce, operator);
+        emit IInferenceTaskManager.TaskRejected(task.nonce, operator);
 
         vm.prank(aggregator);
         taskManager.resolveTask(task.nonce, false);
 
         assertEq(
             uint8(taskManager.getTask(task.nonce).state),
-            uint8(ISertnTaskManager.TaskState.REJECTED)
+            uint8(IInferenceTaskManager.TaskState.REJECTED)
         );
 
         // check the task ID is not in the pending list anymore
@@ -387,27 +387,27 @@ contract SertnTaskManagerTest is Test {
     }
 
     function test_resolveTask_revertNotAggregator() public {
-        vm.expectRevert(ISertnTaskManager.NotAggregator.selector);
+        vm.expectRevert(IInferenceTaskManager.NotAggregator.selector);
         vm.prank(nonAggregator);
         taskManager.resolveTask(0, true);
     }
 
     function test_resolveTask_revertTaskDoesNotExist() public {
-        vm.expectRevert(ISertnTaskManager.TaskDoesNotExist.selector);
+        vm.expectRevert(IInferenceTaskManager.TaskDoesNotExist.selector);
         vm.prank(aggregator);
         taskManager.resolveTask(999, true);
     }
 
     function test_resolveTask_revertTaskStateIncorrect() public {
         // Send a task but don't challenge it
-        ISertnTaskManager.Task memory task = _createValidTask();
+        IInferenceTaskManager.Task memory task = _createValidTask();
         vm.prank(aggregator);
         taskManager.sendTask(task);
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                ISertnTaskManager.TaskStateIncorrect.selector,
-                ISertnTaskManager.TaskState.ASSIGNED
+                IInferenceTaskManager.TaskStateIncorrect.selector,
+                IInferenceTaskManager.TaskState.ASSIGNED
             )
         );
         vm.prank(aggregator);
@@ -415,7 +415,7 @@ contract SertnTaskManagerTest is Test {
     }
 
     function test_taskNonceIncrementsCorrectly() public {
-        ISertnTaskManager.Task memory task = _createValidTask();
+        IInferenceTaskManager.Task memory task = _createValidTask();
 
         assertEq(taskManager.taskNonce(), task.nonce);
 
@@ -429,9 +429,9 @@ contract SertnTaskManagerTest is Test {
     }
 
     // Helper function to create a valid task
-    function _createValidTask() internal view returns (ISertnTaskManager.Task memory) {
+    function _createValidTask() internal view returns (IInferenceTaskManager.Task memory) {
         return
-            ISertnTaskManager.Task({
+            IInferenceTaskManager.Task({
                 startBlock: block.number,
                 startTimestamp: uint32(block.timestamp),
                 modelId: modelId,
@@ -440,7 +440,7 @@ contract SertnTaskManagerTest is Test {
                 user: user,
                 nonce: 1,
                 operator: operator,
-                state: ISertnTaskManager.TaskState.CREATED,
+                state: IInferenceTaskManager.TaskState.CREATED,
                 output: "",
                 fee: 1000
             });

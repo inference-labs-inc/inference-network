@@ -4,11 +4,11 @@ pragma solidity ^0.8.29;
 import {IModelRegistry} from "./IModelRegistry.sol";
 
 /**
- * @title ISertnNodesManager
+ * @title IInferenceNodesManager
  * @author Inference Labs, Inc.
- * @notice Interface for SertnNodesManager contract that manages nodes in the Sertn network.
+ * @notice Interface for InferenceNodesManager contract that manages nodes in the Inference network.
  */
-interface ISertnNodesManager {
+interface IInferenceNodesManager {
     // ============ STRUCTS ============
 
     struct Node {

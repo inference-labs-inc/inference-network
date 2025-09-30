@@ -8,9 +8,9 @@ def load_abi(file_name):
         return json.loads(f.read())
 
 
-SERVICE_MANAGER_ABI = load_abi("SertnServiceManager.abi.json")
+SERVICE_MANAGER_ABI = load_abi("InferenceServiceManager.abi.json")
 
-TASK_MANAGER_ABI = load_abi("SertnTaskManager.abi.json")
+TASK_MANAGER_ABI = load_abi("InferenceTaskManager.abi.json")
 
 STRATEGY_ABI = load_abi("StrategyBase.abi.json")
 
@@ -28,4 +28,4 @@ MODEL_REGISTRY_ABI = load_abi("ModelRegistry.abi.json")
 
 REWARDS_COORDINATOR_ABI = load_abi("RewardsCoordinator.abi.json")
 
-SERTN_NODES_MANAGER_ABI = load_abi("SertnNodesManager.abi.json")
+INFERENCE_NODES_MANAGER_ABI = load_abi("InferenceNodesManager.abi.json")

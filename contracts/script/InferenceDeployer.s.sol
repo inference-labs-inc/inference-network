@@ -13,17 +13,17 @@ import {StrategyFactory} from "@eigenlayer/contracts/strategies/StrategyFactory.
 import {StrategyManager} from "@eigenlayer/contracts/core/StrategyManager.sol";
 import {IRewardsCoordinator} from "@eigenlayer/contracts/interfaces/IRewardsCoordinator.sol";
 
-import {SertnServiceManager} from "../src/SertnServiceManager.sol";
+import {InferenceServiceManager} from "../src/InferenceServiceManager.sol";
 import {IStrategy} from "@eigenlayer/contracts/interfaces/IStrategy.sol";
 
 import {IERC20, StrategyFactory} from "@eigenlayer/contracts/strategies/StrategyFactory.sol";
-import {SertnTaskManager} from "../src/SertnTaskManager.sol";
+import {InferenceTaskManager} from "../src/InferenceTaskManager.sol";
 import {ModelRegistry} from "../src/ModelRegistry.sol";
-import {SertnRegistrar} from "../src/SertnRegistrar.sol";
-import {SertnNodesManager} from "../src/SertnNodesManager.sol";
+import {InferenceRegistrar} from "../src/InferenceRegistrar.sol";
+import {InferenceNodesManager} from "../src/InferenceNodesManager.sol";
 import "forge-std/Test.sol";
 
-contract SertnDeployer is Script, Test {
+contract InferenceDeployer is Script, Test {
     using CoreDeploymentLib for *;
     using UpgradeableProxyLib for address;
 
@@ -31,7 +31,7 @@ contract SertnDeployer is Script, Test {
     address proxyAdmin;
     address rewardsOwner;
     address rewardsInitiator;
-    IStrategy sertnStrategy;
+    IStrategy inferenceStrategy;
     CoreDeploymentLib.DeploymentData coreDeployment;
 
     ERC20Mock token;
@@ -47,11 +47,11 @@ contract SertnDeployer is Script, Test {
     ERC20Mock public ethToken2;
     ERC20Mock public serToken;
 
-    SertnServiceManager sertnServiceManager;
-    SertnTaskManager sertnTaskManager;
+    InferenceServiceManager inferenceServiceManager;
+    InferenceTaskManager inferenceTaskManager;
     ModelRegistry modelRegistry;
-    SertnRegistrar sertnRegistrar;
-    SertnNodesManager sertnNodesManager;
+    InferenceRegistrar inferenceRegistrar;
+    InferenceNodesManager inferenceNodesManager;
 
     function setUp() public virtual {
         deployer = vm.rememberKey(vm.envUint("PRIVATE_KEY"));
@@ -76,80 +76,84 @@ contract SertnDeployer is Script, Test {
         _ethStrategies.push(strategy1);
         _ethStrategies.push(strategy2);
 
-        sertnServiceManager = new SertnServiceManager();
+        inferenceServiceManager = new InferenceServiceManager();
         modelRegistry = new ModelRegistry();
-        sertnRegistrar = new SertnRegistrar();
-        sertnTaskManager = new SertnTaskManager();
-        sertnNodesManager = new SertnNodesManager();
+        inferenceRegistrar = new InferenceRegistrar();
+        inferenceTaskManager = new InferenceTaskManager();
+        inferenceNodesManager = new InferenceNodesManager();
 
-        sertnRegistrar.initialize(address(sertnServiceManager));
+        inferenceRegistrar.initialize(address(inferenceServiceManager));
 
-        sertnServiceManager.initialize(
+        inferenceServiceManager.initialize(
             coreDeployment.rewardsCoordinator,
             coreDeployment.delegationManager,
             coreDeployment.allocationManager,
-            address(sertnRegistrar),
+            address(inferenceRegistrar),
             strategies,
             ""
         );
 
         modelRegistry.initialize();
 
-        sertnTaskManager.initialize(
+        inferenceTaskManager.initialize(
             coreDeployment.rewardsCoordinator,
             coreDeployment.delegationManager,
             coreDeployment.allocationManager,
-            address(sertnServiceManager),
+            address(inferenceServiceManager),
             address(modelRegistry),
-            address(sertnNodesManager)
+            address(inferenceNodesManager)
         );
 
-        sertnNodesManager.initialize(
+        inferenceNodesManager.initialize(
             address(coreDeployment.delegationManager),
-            address(sertnTaskManager),
+            address(inferenceTaskManager),
             address(modelRegistry)
         );
 
-        sertnServiceManager.updateTaskManager(address(sertnTaskManager));
-        sertnServiceManager.updateModelRegistry(address(modelRegistry));
+        inferenceServiceManager.updateTaskManager(address(inferenceTaskManager));
+        inferenceServiceManager.updateModelRegistry(address(modelRegistry));
 
         // save some contracts addresses to the deployment json
         string memory json = vm.serializeAddress(
-            "SertnDeployment",
-            "sertnServiceManager",
-            address(sertnServiceManager)
+            "InferenceDeployment",
+            "inferenceServiceManager",
+            address(inferenceServiceManager)
         );
         json = vm.serializeAddress(
-            "SertnDeployment",
-            "sertnTaskManager",
-            address(sertnTaskManager)
+            "InferenceDeployment",
+            "inferenceTaskManager",
+            address(inferenceTaskManager)
         );
-        json = vm.serializeAddress("SertnDeployment", "sertnRegistrar", address(sertnRegistrar));
         json = vm.serializeAddress(
-            "SertnDeployment",
+            "InferenceDeployment",
+            "inferenceRegistrar",
+            address(inferenceRegistrar)
+        );
+        json = vm.serializeAddress(
+            "InferenceDeployment",
             "rewardsCoordinator",
             address(coreDeployment.rewardsCoordinator)
         );
         json = vm.serializeAddress(
-            "SertnDeployment",
+            "InferenceDeployment",
             "allocationManager",
             address(coreDeployment.allocationManager)
         );
         for (uint256 i = 0; i < strategies.length; i++) {
             json = vm.serializeAddress(
-                "SertnDeployment",
+                "InferenceDeployment",
                 string.concat("strategy_", Strings.toString(i)),
                 address(strategies[i])
             );
         }
         for (uint256 i = 0; i < _ethStrategies.length; i++) {
             json = vm.serializeAddress(
-                "SertnDeployment",
+                "InferenceDeployment",
                 string.concat("eth_strategy_", Strings.toString(i)),
                 address(_ethStrategies[i])
             );
         }
-        vm.writeFile("deployments/sertnDeployment.json", json);
+        vm.writeFile("deployments/inferenceDeployment.json", json);
 
         vm.stopBroadcast();
     }

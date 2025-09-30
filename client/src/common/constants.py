@@ -20,10 +20,10 @@ TEMP_FOLDER.mkdir(parents=True, exist_ok=True)
 PROOFS_FOLDER.mkdir(parents=True, exist_ok=True)
 
 # contracts addresses:
-with open(CONTRACTS_DIR / "deployments" / "sertnDeployment.json") as f:
+with open(CONTRACTS_DIR / "deployments" / "inferenceDeployment.json") as f:
     deployment_info = json.load(f)
-    TASK_MANAGER_ADDRESS = deployment_info["sertnTaskManager"]
-    SERVICE_MANAGER_ADDRESS = deployment_info["sertnServiceManager"]
+    TASK_MANAGER_ADDRESS = deployment_info["inferenceTaskManager"]
+    SERVICE_MANAGER_ADDRESS = deployment_info["inferenceServiceManager"]
     ALLOCATION_MANAGER_ADDRESS = deployment_info["allocationManager"]
     STRATEGIES_ADDRESSES = [
         deployment_info["strategy_0"],
