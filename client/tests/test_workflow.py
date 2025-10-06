@@ -1,9 +1,6 @@
-import asyncio
-import threading
 import time
 
 import requests
-import uvicorn
 
 from aggregator.main import Aggregator
 from avs_operator.main import TaskOperator
@@ -14,7 +11,7 @@ from management.owner import AvsOwner
 
 class TestWorkflow:
 
-    def request_stats(self, path, **params):
+    def make_request(self, path, **params):
         params = {"limit": 100, "offset": 0, "include_details": False, **params}
         res = requests.get(f"http://localhost:8090/{path}", params=params)
         assert res.status_code == 200
@@ -35,13 +32,13 @@ class TestWorkflow:
         assert task_id is not None, "Task ID should not be None"
 
         # here task should be assigned to the operator
-        res = self.request_stats(
+        res = self.make_request(
             "operator-inference-history", operator=operator.operator_address
         )
         assert task_id in res["tasks"]
 
         # check that the task is visible in the stats endpoint
-        res = self.request_stats(
+        res = self.make_request(
             "state-inference-history", state=TaskStateMap.ASSIGNED.value
         )
         assert task_id in res["tasks"]
@@ -52,12 +49,12 @@ class TestWorkflow:
         # the task should be marked as completed
 
         # check that the task is not visible in the assigned state
-        res = self.request_stats(
+        res = self.make_request(
             "state-inference-history", state=TaskStateMap.ASSIGNED.value
         )
         assert task_id not in res["tasks"]
         # and is visible in the completed state
-        res = self.request_stats(
+        res = self.make_request(
             "state-inference-history", state=TaskStateMap.COMPLETED.value
         )
         assert task_id in res["tasks"]
@@ -69,12 +66,12 @@ class TestWorkflow:
 
         time.sleep(5)
         # Check that the task is not visible in the completed state
-        res = self.request_stats(
+        res = self.make_request(
             "state-inference-history", state=TaskStateMap.COMPLETED.value
         )
         assert task_id not in res["tasks"]
         # and is visible in the challenged state
-        res = self.request_stats(
+        res = self.make_request(
             "state-inference-history", state=TaskStateMap.CHALLENGED.value
         )
         assert task_id in res["tasks"]
@@ -91,12 +88,12 @@ class TestWorkflow:
         user = task[TaskStructMap.USER]
 
         # Check that the model is not visible in the challenged state
-        res = self.request_stats(
+        res = self.make_request(
             "state-inference-history", state=TaskStateMap.CHALLENGED.value
         )
         assert task_id not in res["tasks"]
         # and is visible in the resolved state
-        res = self.request_stats(
+        res = self.make_request(
             "state-inference-history",
             state=TaskStateMap.RESOLVED.value,
             limit=1,
@@ -104,10 +101,10 @@ class TestWorkflow:
         )
         assert [task_id] == res["tasks"]
         # and the task is visible in the model-specific history
-        res = self.request_stats("model-inference-history", model_id=model_id)
+        res = self.make_request("model-inference-history", model_id=model_id)
         assert task_id in res["tasks"]
         # and the task is visible in the user-specific history
-        res = self.request_stats("user-inference-history", user=user, limit=1, offset=0)
+        res = self.make_request("user-inference-history", user=user, limit=1, offset=0)
         assert [task_id] == res["tasks"]
 
         # check rewards collected for the operator
@@ -204,12 +201,12 @@ class TestWorkflow:
         assert task[TaskStructMap.STATE] == TaskStateMap.REJECTED.value
 
         # Check that the task is not visible in the challenged state
-        res = self.request_stats(
+        res = self.make_request(
             "state-inference-history", state=TaskStateMap.CHALLENGED.value
         )
         assert task_id not in res["tasks"]
         # and is visible in the rejected state
-        res = self.request_stats(
+        res = self.make_request(
             "state-inference-history", state=TaskStateMap.REJECTED.value
         )
         assert task_id in res["tasks"]

@@ -24,6 +24,29 @@ from management.owner import AvsOwner
 sys.path.insert(0, str(CLIENT_SRC_PATH))
 load_dotenv(ROOT_DIR / ".env")  # Load environment variables
 
+OPERATOR_NODES = [
+    {
+        "node_name": "node1",
+        "metadata": "optional metadata",
+        "total_fucus": 500,
+        "is_active": True,
+        "models": [
+            {"model_name": "model_0", "allocated_fucus": 500},
+            # {"model_name": "model_1", "allocated_fucus": 50},
+        ],
+    },
+    {
+        "node_name": "node2",
+        "metadata": "optional metadata",
+        "total_fucus": 900,
+        "is_active": True,
+        "models": [
+            {"model_name": "model_0", "allocated_fucus": 900},
+            # {"model_name": "model_1", "allocated_fucus": 10},
+        ],
+    },
+]
+
 
 @pytest.fixture(scope="session")
 def owner():
@@ -91,28 +114,7 @@ def operator():
         aggregator_server_ip_port_address="localhost:8090",
         ecdsa_private_key_store_path="tests/keys/operator.ecdsa.key.json",
         auto_update=False,
-        nodes=[
-            {
-                "node_name": "node1",
-                "metadata": "optional metadata",
-                "total_fucus": 500,
-                "is_active": True,
-                "models": [
-                    {"model_name": "model_0", "allocated_fucus": 500},
-                    # {"model_name": "model_1", "allocated_fucus": 50},
-                ],
-            },
-            {
-                "node_name": "node2",
-                "metadata": "optional metadata",
-                "total_fucus": 900,
-                "is_active": True,
-                "models": [
-                    {"model_name": "model_0", "allocated_fucus": 900},
-                    # {"model_name": "model_1", "allocated_fucus": 10},
-                ],
-            },
-        ],
+        nodes=OPERATOR_NODES,
     )
     operator = TaskOperator(config)
     operator.nodes_manager.sync_nodes()

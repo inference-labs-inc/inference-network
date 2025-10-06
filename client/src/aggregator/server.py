@@ -51,6 +51,7 @@ class AggregatorServer:
         self.router.add_api_route(
             "/inference-stats", self.inference_stats, methods=["GET"]
         )
+        self.router.add_api_route("/nodes", self.nodes_list, methods=["GET"])
         self.app.include_router(self.router)
 
     async def submit_proof(self, data: ProofRequest):
@@ -240,16 +241,7 @@ class AggregatorServer:
                 detail=f"Failed to retrieve inference history: {str(exc)}",
             )
 
-    async def inference_stats(
-        self,
-        model_id: Optional[int] = Query(None, description="Filter by model ID"),
-        operator: Optional[str] = Query(
-            None, pattern=ADDRESS_REGEXP, description="Filter by operator address"
-        ),
-        user: Optional[str] = Query(
-            None, pattern=ADDRESS_REGEXP, description="Filter by user address"
-        ),
-    ):
+    async def inference_stats(self):
         """
         Get inference task statistics with optional filtering.
 
@@ -257,9 +249,7 @@ class AggregatorServer:
         Can filter by model, operator, or user.
         """
         try:
-            stats = await run_in_threadpool(
-                self._get_task_history_stats, model_id or 0, operator, user
-            )
+            stats = await run_in_threadpool(self._get_task_history_stats)
             return {"stats": stats}
         except Exception as exc:
             raise HTTPException(
@@ -312,20 +302,12 @@ class AggregatorServer:
                 returnList.append(tasksCount - offset - i)
             return returnList
 
-    def _get_task_history_stats(
-        self, model_id: int, operator: Optional[str], user: Optional[str]
-    ) -> dict:
+    def _get_task_history_stats(self) -> dict:
         """Get task history statistics."""
-
-        # Convert None to zero address for contract call
-        operator_param = operator if operator else ZERO_ADDRESS
-        user_param = user if user else ZERO_ADDRESS
 
         # Get stats from contract
         total_tasks, completed_tasks, rejected_tasks, pending_tasks = (
-            self.eth_client.task_manager.functions.getTaskHistoryStats(
-                model_id, operator_param, user_param
-            ).call()
+            self.eth_client.task_manager.functions.getTaskHistoryStats().call()
         )
 
         return {
@@ -336,11 +318,6 @@ class AggregatorServer:
             "success_rate": (
                 round(completed_tasks / total_tasks * 100, 2) if total_tasks > 0 else 0
             ),
-            "filters": {
-                "model_id": model_id if model_id > 0 else None,
-                "operator": operator,
-                "user": user,
-            },
         }
 
     def _format_task_data(self, task_id: int, task_data: tuple) -> dict:
@@ -376,6 +353,79 @@ class AggregatorServer:
             ),
             "fee": task_data[TaskStructMap.FEE],
         }
+
+    async def nodes_list(self):
+        """
+        Get list of all active nodes with full details.
+
+        Returns list of active nodes with complete details including
+        operator, name, metadata, FUCUS allocation, and supported models.
+        """
+        try:
+            # Use the efficient contract function to get all active nodes with details
+            (
+                node_details_arrays,
+                supported_models_arrays,
+                model_allocations_arrays,
+            ) = await run_in_threadpool(
+                self.eth_client.nodes_manager.functions.getAllNodesWithDetails().call
+            )
+
+            nodes = []
+            for i, node_details in enumerate(node_details_arrays):
+                # Unpack the uint256[10] array
+                node_id = node_details[0]
+                operator_uint = node_details[1]
+                total_fucus = node_details[2]
+                allocated_fucus = node_details[3]
+                available_fucus = node_details[4]
+                is_active_int = node_details[5]
+                created_at = node_details[6]
+                supported_models_count = node_details[7]
+
+                # Convert operator back to address
+                operator = f"0x{operator_uint:040x}"
+                is_active = is_active_int == 1
+
+                # Get name and metadata from individual contract call
+                node_data = await run_in_threadpool(
+                    self.eth_client.nodes_manager.functions.nodes(node_id).call
+                )
+                name = node_data[2]
+                metadata = node_data[3]
+
+                # Build model configurations
+                model_configs = []
+                for j, model_id in enumerate(supported_models_arrays[i]):
+                    model_configs.append(
+                        {
+                            "model_id": model_id,
+                            "allocated_fucus": model_allocations_arrays[i][j],
+                        }
+                    )
+
+                nodes.append(
+                    {
+                        "node_id": node_id,
+                        "operator": operator,
+                        "name": name,
+                        "metadata": metadata,
+                        "total_fucus": total_fucus,
+                        "allocated_fucus": allocated_fucus,
+                        "available_fucus": available_fucus,
+                        "is_active": is_active,
+                        "created_at": created_at,
+                        "supported_models_count": supported_models_count,
+                        "supported_models": model_configs,
+                    }
+                )
+
+            return nodes
+
+        except Exception as exc:
+            raise HTTPException(
+                status_code=500, detail=f"Failed to retrieve nodes: {str(exc)}"
+            )
 
     async def health(self):
         return {"status": "running"}

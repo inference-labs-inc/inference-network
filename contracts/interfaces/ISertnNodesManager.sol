@@ -313,4 +313,19 @@ interface ISertnNodesManager {
         address operator,
         uint256 modelId
     ) external view returns (uint256);
+
+    /**
+     * @notice Get all nodes with their details and supported models in a single call
+     * @return nodeDetails Array of node details (nodeId, operator, name, metadata, totalFucus, allocatedFucus, availableFucus, isActive, createdAt, supportedModelsCount)
+     * @return supportedModels Array of arrays containing supported model IDs for each node
+     * @return modelAllocations Array of arrays containing FUCUS allocations for each model on each node
+     */
+    function getAllNodesWithDetails()
+        external
+        view
+        returns (
+            uint256[8][] memory nodeDetails,
+            uint256[][] memory supportedModels,
+            uint256[][] memory modelAllocations
+        );
 }

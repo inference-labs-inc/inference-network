@@ -802,4 +802,137 @@ contract SertnNodesManagerTest is Test {
 
         assertEq(nodesManager.getTotalFucusForOperatorModel(operator1.addr, modelId1), 0);
     }
+
+    // ============ GET ALL NODES WITH DETAILS TESTS ============
+
+    function testGetAllNodesWithDetailsEmpty() public view {
+        (
+            uint256[8][] memory nodeDetails,
+            uint256[][] memory supportedModels,
+            uint256[][] memory modelAllocations
+        ) = nodesManager.getAllNodesWithDetails();
+
+        assertEq(nodeDetails.length, 0);
+        assertEq(supportedModels.length, 0);
+        assertEq(modelAllocations.length, 0);
+    }
+
+    function testGetAllNodesWithDetailsActiveOnly() public {
+        // Register multiple nodes with different operators
+        vm.startPrank(operator1.addr);
+        uint256 nodeId1 = nodesManager.registerNode("Node 1", "metadata1", 1000);
+        nodesManager.addModelSupport(nodeId1, modelId1, 300);
+        nodesManager.addModelSupport(nodeId1, modelId2, 200);
+        vm.stopPrank();
+
+        vm.startPrank(operator2.addr);
+        uint256 nodeId2 = nodesManager.registerNode("Node 2", "metadata2", 2000);
+        nodesManager.addModelSupport(nodeId2, modelId1, 500);
+
+        // Create an inactive node (should not be returned)
+        uint256 nodeId3 = nodesManager.registerNode("Node 3", "metadata3", 1500);
+        nodesManager.deactivateNode(nodeId3);
+        vm.stopPrank();
+
+        // Test getAllNodesWithDetails (should return only active nodes)
+        (
+            uint256[8][] memory nodeDetails,
+            uint256[][] memory supportedModels,
+            uint256[][] memory modelAllocations
+        ) = nodesManager.getAllNodesWithDetails();
+
+        // Should return 2 active nodes (nodeId1 and nodeId2), excluding inactive nodeId3
+        assertEq(nodeDetails.length, 2);
+        assertEq(supportedModels.length, 2);
+        assertEq(modelAllocations.length, 2);
+
+        // Verify first node (nodeId1)
+        assertEq(nodeDetails[0][0], nodeId1); // nodeId
+        assertEq(nodeDetails[0][1], uint256(uint160(operator1.addr))); // operator as uint256
+        assertEq(nodeDetails[0][2], 1000); // totalFucus
+        assertEq(nodeDetails[0][3], 500); // allocatedFucus (300 + 200)
+        assertEq(nodeDetails[0][4], 500); // availableFucus (1000 - 500)
+        assertEq(nodeDetails[0][5], 1); // isActive (1 = true)
+        assertEq(nodeDetails[0][6], block.timestamp); // createdAt
+        assertEq(nodeDetails[0][7], 2); // supportedModelsCount
+
+        // Verify supported models for first node
+        assertEq(supportedModels[0].length, 2);
+        assertEq(supportedModels[0][0], modelId1);
+        assertEq(supportedModels[0][1], modelId2);
+        assertEq(modelAllocations[0].length, 2);
+        assertEq(modelAllocations[0][0], 300);
+        assertEq(modelAllocations[0][1], 200);
+
+        // Verify second node (nodeId2)
+        assertEq(nodeDetails[1][0], nodeId2); // nodeId
+        assertEq(nodeDetails[1][1], uint256(uint160(operator2.addr))); // operator as uint256
+        assertEq(nodeDetails[1][2], 2000); // totalFucus
+        assertEq(nodeDetails[1][3], 500); // allocatedFucus
+        assertEq(nodeDetails[1][4], 1500); // availableFucus (2000 - 500)
+        assertEq(nodeDetails[1][5], 1); // isActive (1 = true)
+        assertEq(nodeDetails[1][6], block.timestamp); // createdAt
+        assertEq(nodeDetails[1][7], 1); // supportedModelsCount
+
+        // Verify supported models for second node
+        assertEq(supportedModels[1].length, 1);
+        assertEq(supportedModels[1][0], modelId1);
+        assertEq(modelAllocations[1].length, 1);
+        assertEq(modelAllocations[1][0], 500);
+    }
+
+    function testGetAllNodesWithDetailsNoModelSupport() public {
+        // Register a node without model support
+        vm.startPrank(operator1.addr);
+        uint256 nodeId = nodesManager.registerNode("Empty Node", "no_models", 1000);
+        vm.stopPrank();
+
+        (
+            uint256[8][] memory nodeDetails,
+            uint256[][] memory supportedModels,
+            uint256[][] memory modelAllocations
+        ) = nodesManager.getAllNodesWithDetails();
+
+        assertEq(nodeDetails.length, 1);
+        assertEq(nodeDetails[0][0], nodeId);
+        assertEq(nodeDetails[0][3], 0); // allocatedFucus = 0
+        assertEq(nodeDetails[0][4], 1000); // availableFucus = totalFucus
+        assertEq(nodeDetails[0][7], 0); // supportedModelsCount = 0
+
+        // Verify empty model support arrays
+        assertEq(supportedModels[0].length, 0);
+        assertEq(modelAllocations[0].length, 0);
+    }
+
+    function testGetAllNodesWithDetailsMultipleModels() public {
+        // Register a node with multiple model supports
+        vm.startPrank(operator1.addr);
+        uint256 nodeId = nodesManager.registerNode("Multi Model Node", "supports_many", 2000);
+        nodesManager.addModelSupport(nodeId, modelId1, 800);
+        nodesManager.addModelSupport(nodeId, modelId2, 600);
+        vm.stopPrank();
+
+        (
+            uint256[8][] memory nodeDetails,
+            uint256[][] memory supportedModels,
+            uint256[][] memory modelAllocations
+        ) = nodesManager.getAllNodesWithDetails();
+
+        assertEq(nodeDetails.length, 1);
+        assertEq(nodeDetails[0][0], nodeId);
+        assertEq(nodeDetails[0][2], 2000); // totalFucus
+        assertEq(nodeDetails[0][3], 1400); // allocatedFucus (800 + 600)
+        assertEq(nodeDetails[0][4], 600); // availableFucus (2000 - 1400)
+        assertEq(nodeDetails[0][7], 2); // supportedModelsCount
+
+        // Verify model support arrays
+        assertEq(supportedModels[0].length, 2);
+        assertEq(modelAllocations[0].length, 2);
+
+        // Models should be in the order they were added
+        assertEq(supportedModels[0][0], modelId1);
+        assertEq(supportedModels[0][1], modelId2);
+        assertEq(modelAllocations[0][0], 800);
+        assertEq(modelAllocations[0][1], 600);
+    }
 }

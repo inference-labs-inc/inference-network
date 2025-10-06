@@ -201,4 +201,36 @@ contract SertnNodesManagerMock is ISertnNodesManager {
         availableFucus = new uint256[](1);
         availableFucus[0] = 1000000;
     }
+
+    function getAllNodesWithDetails()
+        external
+        pure
+        returns (
+            uint256[8][] memory nodeDetails,
+            uint256[][] memory supportedModels,
+            uint256[][] memory modelAllocations
+        )
+    {
+        nodeDetails = new uint256[8][](1);
+        nodeDetails[0] = [
+            1, // nodeId
+            uint256(uint160(address(0x1))), // operator
+            1000000, // totalFucus
+            0, // allocatedFucus
+            1000000, // availableFucus
+            1, // supportedModelsCount
+            1, // active (bool as uint)
+            0 // createdAt
+        ];
+
+        supportedModels = new uint256[][](1);
+        supportedModels[0] = new uint256[](1);
+        supportedModels[0][0] = 1; // modelId
+
+        modelAllocations = new uint256[][](1);
+        modelAllocations[0] = new uint256[](1);
+        modelAllocations[0][0] = 1000000; // allocatedFucus
+
+        return (nodeDetails, supportedModels, modelAllocations);
+    }
 }
