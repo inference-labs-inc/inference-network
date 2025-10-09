@@ -238,3 +238,16 @@ class TestWorkflow:
             ).call()
         )
         assert final_rewards == initial_rewards, "No new rewards for the operator"
+
+    def test_tvl_endpoint(self, aggregator_server):
+        """
+        Just a smoke test to ensure /tvl endpoint works and returns expected fields
+        """
+        response = requests.get("http://localhost:8090/tvl")
+        assert response.status_code == 200
+        data = response.json()
+        assert "tvl_by_operator" in data
+        assert "tvl_by_strategy" in data
+        assert data["total_operators"] == 1
+        assert data["active_operators"] == 1
+        assert data["strategies_count"] == 5
