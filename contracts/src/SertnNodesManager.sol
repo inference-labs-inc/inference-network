@@ -527,10 +527,9 @@ contract SertnNodesManager is OwnableUpgradeable, ISertnNodesManager {
 
     /**
      * @notice Get all nodes with their details and supported models in a single call
-     * @return nodeDetails Array of node details packed as uint256[10] arrays:
+     * @return nodeDetails Array of node details packed as uint256[8] arrays:
      *         [0] nodeId, [1] operator (as uint256), [2] totalFucus, [3] allocatedFucus,
-     *         [4] availableFucus, [5] isActive (1/0), [6] createdAt, [7] supportedModelsCount,
-     *         [8] nameLength, [9] metadataLength
+     *         [4] availableFucus, [5] isActive (1/0), [6] createdAt, [7] supportedModelsCount
      * @return supportedModels Array of arrays containing supported model IDs for each node
      * @return modelAllocations Array of arrays containing FUCUS allocations for each model on each node
      * @dev This function is gas-optimized for batch operations. String data (name, metadata)

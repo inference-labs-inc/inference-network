@@ -298,7 +298,7 @@ class AggregatorServer:
 
             nodes = []
             for i, node_details in enumerate(node_details_arrays):
-                # Unpack the uint256[10] array
+                # Unpack the uint256[8] array
                 node_id = node_details[0]
                 operator_uint = node_details[1]
                 total_fucus = node_details[2]

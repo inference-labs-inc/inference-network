@@ -106,3 +106,27 @@ def test_operator_nodes_update(aggregator_server: Aggregator):
     assert len(resp) == 1, "Node count mismatch"
     node = resp[0]
     assert node["total_fucus"] == 1000, f"Total fucus mismatch"
+
+    # Sync back to original config - reduce back allocated fucus
+    nodes_config[1]["models"][0]["allocated_fucus"] = 900
+    TaskOperator(
+        OperatorConfig(
+            eth_rpc_url="http://localhost:8545",
+            aggregator_server_ip_port_address="localhost:8090",
+            ecdsa_private_key_store_path="tests/keys/operator.ecdsa.key.json",
+            auto_update=False,
+            nodes=nodes_config,
+        )
+    ).nodes_manager.sync_nodes()
+    # reduce back total fucus
+    nodes_config[0]["is_active"] = True
+    nodes_config[1]["total_fucus"] = 900
+    TaskOperator(
+        OperatorConfig(
+            eth_rpc_url="http://localhost:8545",
+            aggregator_server_ip_port_address="localhost:8090",
+            ecdsa_private_key_store_path="tests/keys/operator.ecdsa.key.json",
+            auto_update=False,
+            nodes=nodes_config,
+        )
+    ).nodes_manager.sync_nodes()
