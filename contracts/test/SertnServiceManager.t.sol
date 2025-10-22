@@ -287,7 +287,7 @@ contract SertnServiceManagerTest is Test {
         // Test: Complete task (called by task manager)
         vm.prank(address(mockTaskManager));
         vm.expectEmit(true, true, false, true);
-        emit ISertnServiceManager.TaskRewardAccumulated(operator, feeAmount, 0); // currentInterval is mocked as 0
+        emit ISertnServiceManager.TaskRewardAccumulated(operator, feeAmount, mockToken1, 0); // currentInterval is mocked as 0
         serviceManager.taskResolved(
             operator,
             feeAmount,

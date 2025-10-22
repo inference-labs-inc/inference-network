@@ -557,6 +557,12 @@
         "internalType": "uint256"
       },
       {
+        "name": "token",
+        "type": "address",
+        "indexed": false,
+        "internalType": "contract IERC20"
+      },
+      {
         "name": "currentInterval",
         "type": "uint32",
         "indexed": false,

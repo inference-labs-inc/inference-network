@@ -146,6 +146,10 @@ class TestWorkflow:
         # Submit rewards for the interval
         owner.submit_rewards_for_interval(init_environment["current_interval"])
 
+        # Check the fees accumulated during the interval (smoke test)
+        res = self.make_request("fees")
+        # TODO: add more detailed checks
+
     def test_task_incorrect_proof(
         self,
         aggregator: Aggregator,

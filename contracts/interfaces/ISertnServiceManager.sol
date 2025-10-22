@@ -18,7 +18,12 @@ interface ISertnServiceManager {
     error AggregatorAlreadyExists();
 
     /// @notice Emitted when the task is completed and operator reward is accumulated
-    event TaskRewardAccumulated(address indexed operator, uint256 fee, uint32 currentInterval);
+    event TaskRewardAccumulated(
+        address indexed operator,
+        uint256 fee,
+        IERC20 token,
+        uint32 currentInterval
+    );
 
     event RewardsSubmittedForInterval(uint32 interval, uint256 operators_quantity);
 

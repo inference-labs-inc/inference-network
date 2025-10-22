@@ -18,9 +18,12 @@ from common.constants import (
     STRATEGIES_ADDRESSES,
 )
 from common.contract_constants import TaskStateMap, TaskStructMap
+from common.logging import get_logger
 
 if TYPE_CHECKING:
     from aggregator.main import Aggregator
+
+logger = get_logger("aggregator_server")
 
 
 class ProofRequest(BaseModel):
@@ -71,6 +74,7 @@ class AggregatorServer:
         )
         self.router.add_api_route("/nodes", self.nodes_list, methods=["GET"])
         self.router.add_api_route("/tvl", self.tvl, methods=["GET"])
+        self.router.add_api_route("/fees", self.fees_accumulated, methods=["GET"])
         self.app.include_router(self.router)
 
     async def health(self):
@@ -364,6 +368,134 @@ class AggregatorServer:
             raise HTTPException(
                 status_code=500, detail=f"Failed to calculate TVL: {str(exc)}"
             )
+
+    async def fees_accumulated(
+        self,
+        hours: int = Query(24, description="Time window in hours to query events"),
+    ) -> dict:
+        """
+        Get all fees accumulated by operators for a specified time period.
+        """
+        try:
+            result = await run_in_threadpool(
+                self._get_rewards_accumulated_events, hours
+            )
+            return result
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error retrieving fees accumulated: {str(e)}",
+            )
+
+    def _get_rewards_accumulated_events(self, hours: int = 24) -> dict:
+        """
+        Query TaskRewardAccumulated events from the ServiceManager contract.
+
+        Event signature:
+        TaskRewardAccumulated(
+            address indexed operator,
+            uint256 fee,
+            IERC20 token,
+            uint32 currentInterval
+        )
+        """
+        # Calculate block range for the last N hours
+        current_block = self.eth_client.w3.eth.block_number
+
+        # Estimate blocks to go back (assuming ~12 seconds per block)
+        blocks_per_hour = 300  # 3600 seconds / 12 seconds per block
+        blocks_to_query = blocks_per_hour * hours
+        from_block = max(0, current_block - blocks_to_query)
+
+        # Get TaskRewardAccumulated events
+        event_filter = (
+            self.eth_client.service_manager.events.TaskRewardAccumulated.create_filter(
+                from_block=from_block, to_block=current_block
+            )
+        )
+        events = event_filter.get_all_entries()
+
+        # Operator splits to calculate actual operator earnings
+        operator_splits = {}
+        # Aggregate rewards by operator and token
+        rewards_by_operator = {}
+        total_rewards_by_token = {}  # token_address -> total_amount
+        # token_address -> sum of operators' shares
+        total_operators_rewards_by_token = {}
+
+        for event in events:
+            operator = event.args.operator
+            fee = event.args.fee
+            token = event.args.token
+            interval = event.args.currentInterval
+
+            # Initialize operator entry if not exists
+            if operator not in operator_splits:
+                operator_splits[operator] = self._get_operator_split(operator)
+            split_bips = operator_splits[operator]  # Operator's share in bips (0-10000)
+
+            # Initialize operator entry if not exists
+            if operator not in rewards_by_operator:
+                rewards_by_operator[operator] = {}
+
+            # Initialize token entry for operator if not exists
+            if token not in rewards_by_operator[operator]:
+                rewards_by_operator[operator][token] = {
+                    "operator_split_bips": split_bips,
+                    "total_accumulated": 0,
+                    "operator_share": 0,
+                    "stakers_share": 0,
+                    "count": 0,
+                    "intervals": set(),
+                }
+
+            # Accumulate rewards
+            rewards_by_operator[operator][token]["total_accumulated"] += fee
+            rewards_by_operator[operator][token]["operator_share"] += (
+                fee * split_bips
+            ) // 10000
+            rewards_by_operator[operator][token]["stakers_share"] += (
+                fee - (fee * split_bips) // 10000
+            )
+            rewards_by_operator[operator][token]["count"] += 1
+            rewards_by_operator[operator][token]["intervals"].add(interval)
+
+            # Aggregate total by token
+            if token not in total_rewards_by_token:
+                total_rewards_by_token[token] = 0
+                total_operators_rewards_by_token[token] = 0
+            total_rewards_by_token[token] += fee
+            total_operators_rewards_by_token[token] += rewards_by_operator[operator][
+                token
+            ]["operator_share"]
+
+        return {
+            "total_rewards_by_token": total_rewards_by_token,
+            "rewards_by_operator": rewards_by_operator,
+            "operator_splits": operator_splits,
+        }
+
+    def _get_operator_split(self, operator: str) -> int:
+        """
+        Get the operator's split (commission) in basis points for this AVS's operator set.
+
+        The split represents the percentage of rewards the operator keeps vs what goes to stakers.
+        Returns value in basis points (bips) where 10000 = 100%.
+        For example: 1000 bips = 10% goes to operator, 90% to stakers
+        """
+        try:
+            # Get the operator's split for this AVS's operator set
+            # operator_set is a tuple of (avs_address, operator_set_id)
+            split_bips = (
+                self.eth_client.rewards_coordinator.functions.getOperatorSetSplit(
+                    operator,
+                    self.operator_set,  # (SERVICE_MANAGER_ADDRESS, OPERATOR_SET_ID)
+                ).call()
+            )
+            return split_bips
+        except Exception as exc:
+            logger.exception(f"Failed to get operator split for {operator}")
+            raise exc
 
     def _get_filtered_task_ids(
         self,

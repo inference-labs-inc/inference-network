@@ -238,7 +238,7 @@ contract SertnServiceManager is
 
         intervalRewards[currentInterval][address(_strategy)][_operator] += _fee;
 
-        emit TaskRewardAccumulated(_operator, _fee, currentInterval);
+        emit TaskRewardAccumulated(_operator, _fee, _strategy.underlyingToken(), currentInterval);
     }
 
     /// @inheritdoc ISertnServiceManager
