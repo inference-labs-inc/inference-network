@@ -95,6 +95,42 @@ class BaseConfig(BaseModel):
         description="Enable automatic updates for the application",
     )
 
+    # Cache configuration
+    # User can use different cache options: Memcached, Cloudflare KV, or in-memory fallback
+    # All caching options are optional.
+    enable_cache: bool = Field(
+        default=True,
+        description="Enable caching (set to False to disable all caching)",
+    )
+    memcached_host: Optional[str] = Field(
+        default=None,
+        description="Memcached host (e.g., IP address from Memorystore)",
+    )
+    memcached_port: int = Field(
+        default=11211,
+        description="Memcached port",
+    )
+    cloudflare_account_id: Optional[str] = Field(
+        default=None,
+        description="Cloudflare account ID for KV storage",
+    )
+    cloudflare_namespace_id: Optional[str] = Field(
+        default=None,
+        description="Cloudflare KV namespace ID",
+    )
+    cloudflare_api_token: Optional[str] = Field(
+        default=None,
+        description="Cloudflare API token with KV permissions",
+    )
+    cache_connect_timeout: float = Field(
+        default=2.0,
+        description="Cache connection timeout in seconds",
+    )
+    cache_timeout: float = Field(
+        default=2.0,
+        description="Cache operation timeout in seconds",
+    )
+
     @field_validator("ecdsa_private_key_store_path")
     @classmethod
     def validate_key_file_exists(cls, v: Path) -> Path:

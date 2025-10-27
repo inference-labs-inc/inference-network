@@ -115,6 +115,7 @@ def operator():
         ecdsa_private_key_store_path="tests/keys/operator.ecdsa.key.json",
         auto_update=False,
         nodes=OPERATOR_NODES,
+        enable_cache=False,
     )
     operator = TaskOperator(config)
     operator.nodes_manager.sync_nodes()

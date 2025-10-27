@@ -10,6 +10,7 @@ from common.abis import (
     ERC20_ABI,
     STRATEGY_ABI,
 )
+from common.cache import CacheBackend, cached_method, get_cache
 from common.constants import (
     ADDRESS_REGEXP,
     ETH_STRATEGY_ADDRESSES,
@@ -45,6 +46,20 @@ class AggregatorServer:
         self.eth_client = aggregator.eth_client
         self.app = FastAPI()
         self.router = APIRouter()
+
+        # Initialize cache
+        config = aggregator.config
+        self.cache: CacheBackend = get_cache(
+            memcached_host=config.memcached_host,
+            memcached_port=config.memcached_port,
+            cloudflare_account_id=config.cloudflare_account_id,
+            cloudflare_namespace_id=config.cloudflare_namespace_id,
+            cloudflare_api_token=config.cloudflare_api_token,
+            connect_timeout=config.cache_connect_timeout,
+            timeout=config.cache_timeout,
+            enable_cache=config.enable_cache,
+        )
+
         self._register_routes()
 
     def start(self):
@@ -387,9 +402,11 @@ class AggregatorServer:
                 detail=f"Error retrieving fees accumulated: {str(e)}",
             )
 
+    @cached_method(ttl=3600)
     def _get_rewards_accumulated_events(self, hours: int = 24) -> dict:
         """
         Query TaskRewardAccumulated events from the ServiceManager contract.
+        Cached for 1 hour.
 
         Event signature:
         TaskRewardAccumulated(
@@ -475,6 +492,7 @@ class AggregatorServer:
             "operator_splits": operator_splits,
         }
 
+    @cached_method()
     def _get_operator_split(self, operator: str) -> int:
         """
         Get the operator's split (commission) in basis points for this AVS's operator set.
@@ -497,6 +515,7 @@ class AggregatorServer:
             logger.exception(f"Failed to get operator split for {operator}")
             raise exc
 
+    @cached_method(ttl=300)
     def _get_filtered_task_ids(
         self,
         model_id: Optional[int],
@@ -542,8 +561,9 @@ class AggregatorServer:
                 returnList.append(tasksCount - offset - i)
             return returnList
 
+    @cached_method(ttl=300)
     def _get_task_history_stats(self) -> dict:
-        """Get task history statistics."""
+        """Get task history statistics. Cached for 5 minutes."""
 
         # Get stats from contract
         total_tasks, completed_tasks, rejected_tasks, pending_tasks = (
@@ -593,10 +613,11 @@ class AggregatorServer:
             "fee": task_data[TaskStructMap.FEE],
         }
 
+    @cached_method()
     def _get_avs_shares(self) -> dict:
         """
         Get AVS shares across all strategies and aggregate by strategy and operator.
-        TODO: cache it?
+        Cached for 24 hours
         """
         # Get all operators registered to the AVS operator set
         operators = self.eth_client.allocation_manager.functions.getMembers(
@@ -682,13 +703,14 @@ class AggregatorServer:
             "tvl_by_operator": tvl_by_operator,
         }
 
+    @cached_method()
     def _get_strategies_details(
         self, strategies: list[str]
     ) -> dict[str, dict[str, str]]:
         """
         Get strategy details including underlying token symbol and decimals.
         Returns a mapping of strategy address to its details (token, symbol, decimals).
-        TODO: cache this result to avoid repeated calls.
+        Cached for 24 hours as this rarely changes.
         """
         strategies_metadata = {}
         for strategy_address in strategies:

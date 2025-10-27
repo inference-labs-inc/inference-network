@@ -192,6 +192,15 @@ wheels = [
 ]
 
 [[package]]
+name = "cachetools"
+version = "6.2.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/cc/7e/b975b5814bd36faf009faebe22c1072a1fa1168db34d285ef0ba071ad78c/cachetools-6.2.1.tar.gz", hash = "sha256:3f391e4bd8f8bf0931169baf7456cc822705f4e2a31f840d218f445b9a854201", size = 31325, upload-time = "2025-10-12T14:55:30.139Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/96/c5/1e741d26306c42e2bf6ab740b2202872727e0f606033c9dd713f8b93f5a8/cachetools-6.2.1-py3-none-any.whl", hash = "sha256:09868944b6dde876dfd44e1d47e18484541eaf12f26f29b7af91b26cc892d701", size = 11280, upload-time = "2025-10-12T14:55:28.382Z" },
+]
+
+[[package]]
 name = "certifi"
 version = "2025.1.31"
 source = { registry = "https://pypi.org/simple" }
@@ -1191,6 +1200,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pymemcache"
+version = "4.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d9/b6/4541b664aeaad025dfb8e851dcddf8e25ab22607e674dd2b562ea3e3586f/pymemcache-4.0.0.tar.gz", hash = "sha256:27bf9bd1bbc1e20f83633208620d56de50f14185055e49504f4f5e94e94aff94", size = 70176, upload-time = "2022-10-17T16:53:07.726Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/41/ba/2f7b22d8135b51c4fefb041461f8431e1908778e6539ff5af6eeaaee367a/pymemcache-4.0.0-py2.py3-none-any.whl", hash = "sha256:f507bc20e0dc8d562f8df9d872107a278df049fa496805c1431b926f3ddd0eab", size = 60772, upload-time = "2022-10-17T16:53:04.388Z" },
+]
+
+[[package]]
 name = "pyreadline3"
 version = "3.5.4"
 source = { registry = "https://pypi.org/simple" }
@@ -1422,6 +1440,7 @@ name = "sertn-avs"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "cachetools" },
     { name = "eth-abi" },
     { name = "eth-account" },
     { name = "ezkl" },
@@ -1430,6 +1449,7 @@ dependencies = [
     { name = "onnxruntime" },
     { name = "packaging" },
     { name = "pydantic" },
+    { name = "pymemcache" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
     { name = "torch", version = "2.4.1", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(platform_machine == 'aarch64' and sys_platform == 'linux') or sys_platform == 'darwin'" },
@@ -1456,6 +1476,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "cachetools", specifier = ">=6.2.1" },
     { name = "eth-abi", specifier = ">=5.2.0" },
     { name = "eth-account", specifier = ">=0.13.5" },
     { name = "ezkl", specifier = "==19.0.7" },
@@ -1464,6 +1485,7 @@ requires-dist = [
     { name = "onnxruntime", specifier = ">=1.21.1" },
     { name = "packaging", specifier = ">=24.2" },
     { name = "pydantic", specifier = ">=2.6.3" },
+    { name = "pymemcache", specifier = ">=4.0.0" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=8.0.0" },
     { name = "pytest-asyncio", marker = "extra == 'test'", specifier = ">=0.23.5" },
     { name = "pytest-cov", marker = "extra == 'test'", specifier = ">=4.1.0" },

@@ -25,6 +25,7 @@
         "keccak",
         "Localnet",
         "LSTM",
+        "Memorystore",
         "Offchain",
         "operatorsinfo",
         "pbar",
