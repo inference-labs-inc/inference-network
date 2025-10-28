@@ -64,6 +64,7 @@ def aggregator():
         ecdsa_private_key_store_path="tests/keys/aggregator.ecdsa.key.json",
         proof_request_probability=1.0,  # challenge every task
         auto_update=False,
+        enable_cache=False,
     )
     return Aggregator(config)
 
@@ -77,7 +78,10 @@ def aggregator_server(aggregator: Aggregator):
     def start_server():
         nonlocal server
         config = uvicorn.Config(
-            app=aggregator.server.app, host="0.0.0.0", port=8090, log_level="info"
+            app=aggregator.server.app,
+            host="0.0.0.0",
+            port=8090,
+            log_level="info",
         )
         server = uvicorn.Server(config)
 

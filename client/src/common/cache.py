@@ -185,7 +185,6 @@ class CloudflareKVCache(CacheBackend):
         self.namespace_id = namespace_id
         self.api_token = api_token
         self.timeout = timeout
-        # curl            https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/storage/kv/namespaces/$NAMESPACE_ID/values/$KEY_NAME \
         self.base_url = f"https://api.cloudflare.com/client/v4/accounts/{account_id}/storage/kv/namespaces/{namespace_id}"
         self.headers = {
             "Authorization": f"Bearer {api_token}",
