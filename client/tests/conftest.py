@@ -18,7 +18,8 @@ from web3 import Web3
 from aggregator.main import Aggregator
 from avs_operator.main import TaskOperator
 from common.config import AggregatorConfig, OperatorConfig
-from common.constants import CLIENT_SRC_PATH, ROOT_DIR
+from common.constants import CLIENT_SRC_PATH, ROOT_DIR, STRATEGIES_ADDRESSES
+from common.abis import STRATEGY_ABI
 from management.owner import AvsOwner
 
 sys.path.insert(0, str(CLIENT_SRC_PATH))
@@ -64,7 +65,7 @@ def aggregator():
         ecdsa_private_key_store_path="tests/keys/aggregator.ecdsa.key.json",
         proof_request_probability=1.0,  # challenge every task
         auto_update=False,
-        enable_cache=False,
+        caching={"disable": True},
     )
     return Aggregator(config)
 
@@ -119,7 +120,7 @@ def operator():
         ecdsa_private_key_store_path="tests/keys/operator.ecdsa.key.json",
         auto_update=False,
         nodes=OPERATOR_NODES,
-        enable_cache=False,
+        caching={"disable": True},
     )
     operator = TaskOperator(config)
     operator.nodes_manager.sync_nodes()
@@ -246,3 +247,12 @@ def dummy_address() -> str:
     """Return a valid EIP-55 Ethereum address for tests."""
     raw = "0x" + os.urandom(20).hex()
     return Web3.to_checksum_address(raw)
+
+
+@pytest.fixture(scope="function")
+def strategies(aggregator: Aggregator):
+    """Return list of strategy contract objects."""
+    return [
+        aggregator.eth_client.w3.eth.contract(address=addr, abi=STRATEGY_ABI)
+        for addr in STRATEGIES_ADDRESSES
+    ]

@@ -49,16 +49,7 @@ class AggregatorServer:
 
         # Initialize cache
         config = aggregator.config
-        self.cache: CacheBackend = get_cache(
-            memcached_host=config.memcached_host,
-            memcached_port=config.memcached_port,
-            cloudflare_account_id=config.cloudflare_account_id,
-            cloudflare_namespace_id=config.cloudflare_namespace_id,
-            cloudflare_api_token=config.cloudflare_api_token,
-            connect_timeout=config.cache_connect_timeout,
-            timeout=config.cache_timeout,
-            enable_cache=config.enable_cache,
-        )
+        self.cache: CacheBackend = get_cache(config=config.caching)
 
         self._register_routes()
 

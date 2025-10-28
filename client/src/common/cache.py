@@ -13,6 +13,7 @@ from cachetools import TTLCache
 from pymemcache.client.base import Client as MemcacheClient
 from pymemcache.exceptions import MemcacheError
 
+from common.config import CacheConfig
 from common.logging import get_logger
 
 logger = get_logger("cache")
@@ -334,49 +335,33 @@ class NoOpCache(CacheBackend):
         return True
 
 
-def get_cache(
-    memcached_host: Optional[str] = None,
-    memcached_port: int = 11211,
-    cloudflare_account_id: Optional[str] = None,
-    cloudflare_namespace_id: Optional[str] = None,
-    cloudflare_api_token: Optional[str] = None,
-    connect_timeout: float = 2.0,
-    timeout: float = 2.0,
-    fallback_maxsize: int = 1000,
-    fallback_ttl: int = 300,
-    enable_cache: bool = True,
-) -> CacheBackend:
+def get_cache(config: CacheConfig) -> CacheBackend:
     """
     Factory function that returns a cache backend instance.
     Priority order: Cloudflare KV > Memcached > In-memory cache.
 
     Args:
-        memcached_host: Memcached host (e.g., IP address from Memorystore)
-        memcached_port: Memcached port (default: 11211)
-        cloudflare_account_id: Cloudflare account ID for KV
-        cloudflare_namespace_id: Cloudflare KV namespace ID
-        cloudflare_api_token: Cloudflare API token with KV permissions
-        connect_timeout: Connection timeout in seconds
-        timeout: Operation timeout in seconds
-        fallback_maxsize: Max items for in-memory cache fallback
-        fallback_ttl: Default TTL for in-memory cache fallback
-        enable_cache: If False, returns NoOpCache that disables caching entirely
+        config: CacheConfig instance with cache configuration
 
     Returns:
         CacheBackend: CloudflareKVCache, MemcachedCache, InMemoryCache, or NoOpCache instance
     """
     # If caching is disabled, return no-op cache
-    if not enable_cache:
+    if config.disable:
         return NoOpCache()
 
     # Try Cloudflare KV first if configuration is provided
-    if cloudflare_account_id and cloudflare_namespace_id and cloudflare_api_token:
+    if (
+        config.cloudflare_account_id
+        and config.cloudflare_namespace_id
+        and config.cloudflare_api_token
+    ):
         try:
             kv_cache = CloudflareKVCache(
-                account_id=cloudflare_account_id,
-                namespace_id=cloudflare_namespace_id,
-                api_token=cloudflare_api_token,
-                timeout=timeout,
+                account_id=config.cloudflare_account_id,
+                namespace_id=config.cloudflare_namespace_id,
+                api_token=config.cloudflare_api_token,
+                timeout=config.timeout,
             )
             # Test connection with a simple operation
             kv_cache.exists("__test_connection__")
@@ -393,10 +378,13 @@ def get_cache(
             )
 
     # Try Memcached if configuration is provided
-    if memcached_host:
+    if config.memcached_host and config.memcached_port:
         try:
             return MemcachedCache(
-                memcached_host, memcached_port, connect_timeout, timeout
+                config.memcached_host,
+                config.memcached_port,
+                config.connect_timeout,
+                config.timeout,
             )
 
         except MemcacheError as e:
@@ -412,7 +400,9 @@ def get_cache(
     logger.info(
         "Using in-memory cache (no external cache configuration or connection failed)"
     )
-    return InMemoryCache(maxsize=fallback_maxsize, default_ttl=fallback_ttl)
+    return InMemoryCache(
+        maxsize=config.fallback_maxsize, default_ttl=config.fallback_ttl
+    )
 
 
 def cached_method(ttl: int = 86400, key_prefix: Optional[str] = None):

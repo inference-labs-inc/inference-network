@@ -24,8 +24,28 @@ class TestWorkflow:
         operator: TaskOperator,
         owner: AvsOwner,
         init_environment: dict,
+        strategies: list,
     ):
-        """Just a smoke test to ensure send_new_task runs without errors"""
+        """
+        Simulate end-to-end task processing workflow:
+        - Create a new task
+        - Operator processes the task
+        - Aggregator challenges the task
+        - Operator generates proof
+        - Aggregator resolves the task
+        - Verify rewards distribution
+        """
+        # get underlying token address for the future task
+        token_address = strategies[0].functions.underlyingToken().call()
+
+        # Get the operator's fees before processing the task
+        res = self.make_request("fees", hours=24)
+        base_operator_fee = (
+            res["rewards_by_operator"]
+            .get(operator.operator_address, {})
+            .get(token_address, {})
+            .get("operator_share", 0)
+        )
 
         # create a new task
         task_id = aggregator.send_new_task(1)
@@ -147,8 +167,16 @@ class TestWorkflow:
         owner.submit_rewards_for_interval(init_environment["current_interval"])
 
         # Check the fees accumulated during the interval (smoke test)
-        res = self.make_request("fees")
-        # TODO: add more detailed checks
+        res = self.make_request("fees", hours=24)
+        updated_operator_fee = (
+            res["rewards_by_operator"]
+            .get(operator.operator_address, {})
+            .get(token_address, {})
+            .get("operator_share", 0)
+        )
+        assert (
+            updated_operator_fee > base_operator_fee
+        ), "Operator's fees should increase after processing the task"
 
     def test_task_incorrect_proof(
         self,

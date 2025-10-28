@@ -73,33 +73,15 @@ class NodeConfig(BaseModel):
         return self
 
 
-class BaseConfig(BaseModel):
-    """Base configuration shared by both operator and aggregator."""
+class CacheConfig(BaseModel):
+    """
+    Configuration for caching backend.
+    User can use different cache options: Memcached, Cloudflare KV, or in-memory fallback
+    All caching options are optional.
+    """
 
-    model_config = {"extra": "forbid"}  # Prevent unknown fields
-
-    environment: Environment = Field(
-        default=Environment.PRODUCTION,
-        description="Environment setting for logging and behavior",
-    )
-    eth_rpc_url: str = Field(description="Ethereum RPC URL")
-    ecdsa_private_key_store_path: Path = Field(
-        ..., description="Path to ECDSA private key file"
-    )
-    gas_strategy: GasStrategy = Field(
-        default=GasStrategy.STANDARD,
-        description="Gas strategy for transaction execution",
-    )
-    auto_update: bool = Field(
-        default=True,
-        description="Enable automatic updates for the application",
-    )
-
-    # Cache configuration
-    # User can use different cache options: Memcached, Cloudflare KV, or in-memory fallback
-    # All caching options are optional.
-    enable_cache: bool = Field(
-        default=True,
+    disable: bool = Field(
+        default=False,
         description="Enable caching (set to False to disable all caching)",
     )
     memcached_host: Optional[str] = Field(
@@ -122,13 +104,48 @@ class BaseConfig(BaseModel):
         default=None,
         description="Cloudflare API token with KV permissions",
     )
-    cache_connect_timeout: float = Field(
+    connect_timeout: float = Field(
         default=2.0,
         description="Cache connection timeout in seconds",
     )
-    cache_timeout: float = Field(
+    timeout: float = Field(
         default=2.0,
         description="Cache operation timeout in seconds",
+    )
+    fallback_maxsize: int = Field(
+        default=1000,
+        description="Max size for in-memory fallback cache",
+    )
+    fallback_ttl: int = Field(
+        default=300,
+        description="TTL (in seconds) for in-memory fallback cache entries",
+    )
+
+
+class BaseConfig(BaseModel):
+    """Base configuration shared by both operator and aggregator."""
+
+    model_config = {"extra": "forbid"}  # Prevent unknown fields
+
+    environment: Environment = Field(
+        default=Environment.PRODUCTION,
+        description="Environment setting for logging and behavior",
+    )
+    eth_rpc_url: str = Field(description="Ethereum RPC URL")
+    ecdsa_private_key_store_path: Path = Field(
+        ..., description="Path to ECDSA private key file"
+    )
+    gas_strategy: GasStrategy = Field(
+        default=GasStrategy.STANDARD,
+        description="Gas strategy for transaction execution",
+    )
+    auto_update: bool = Field(
+        default=True,
+        description="Enable automatic updates for the application",
+    )
+    caching: CacheConfig = Field(
+        default_factory=CacheConfig,
+        description="Caching configuration",
     )
 
     @field_validator("ecdsa_private_key_store_path")
