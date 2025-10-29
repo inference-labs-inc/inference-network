@@ -40,6 +40,7 @@
         "Slashable",
         "timespan",
         "tupple",
+        "urandom",
         "venv",
         "ZKML"
     ],
