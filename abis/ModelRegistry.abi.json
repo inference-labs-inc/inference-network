@@ -98,6 +98,56 @@
   },
   {
     "type": "function",
+    "name": "getActiveModelsWithDetails",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "models",
+        "type": "tuple[]",
+        "internalType": "struct IModelRegistry.ModelDetails[]",
+        "components": [
+          {
+            "name": "modelId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "modelName",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "modelVerifier",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "verificationStrategy",
+            "type": "uint8",
+            "internalType": "enum IModelRegistry.VerificationStrategy"
+          },
+          {
+            "name": "computeCost",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "requiredFUCUs",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "isActive",
+            "type": "bool",
+            "internalType": "bool"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getRandomActiveModel",
     "inputs": [
       {

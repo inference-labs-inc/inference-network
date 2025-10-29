@@ -73,6 +73,55 @@ class NodeConfig(BaseModel):
         return self
 
 
+class CacheConfig(BaseModel):
+    """
+    Configuration for caching backend.
+    User can use different cache options: Memcached, Cloudflare KV, or in-memory fallback
+    All caching options are optional.
+    """
+
+    disable: bool = Field(
+        default=False,
+        description="Enable caching (set to False to disable all caching)",
+    )
+    memcached_host: Optional[str] = Field(
+        default=None,
+        description="Memcached host (e.g., IP address from Memorystore)",
+    )
+    memcached_port: int = Field(
+        default=11211,
+        description="Memcached port",
+    )
+    cloudflare_account_id: Optional[str] = Field(
+        default=None,
+        description="Cloudflare account ID for KV storage",
+    )
+    cloudflare_namespace_id: Optional[str] = Field(
+        default=None,
+        description="Cloudflare KV namespace ID",
+    )
+    cloudflare_api_token: Optional[str] = Field(
+        default=None,
+        description="Cloudflare API token with KV permissions",
+    )
+    connect_timeout: float = Field(
+        default=2.0,
+        description="Cache connection timeout in seconds",
+    )
+    timeout: float = Field(
+        default=2.0,
+        description="Cache operation timeout in seconds",
+    )
+    fallback_maxsize: int = Field(
+        default=1000,
+        description="Max size for in-memory fallback cache",
+    )
+    fallback_ttl: int = Field(
+        default=300,
+        description="TTL (in seconds) for in-memory fallback cache entries",
+    )
+
+
 class BaseConfig(BaseModel):
     """Base configuration shared by both operator and aggregator."""
 
@@ -81,6 +130,11 @@ class BaseConfig(BaseModel):
     environment: Environment = Field(
         default=Environment.PRODUCTION,
         description="Environment setting for logging and behavior",
+    )
+    chain_id: int = Field(
+        description="Ethereum chain ID to connect to",
+        default=31337,  # Hardhat local network
+        ge=1,
     )
     eth_rpc_url: str = Field(description="Ethereum RPC URL")
     ecdsa_private_key_store_path: Path = Field(
@@ -93,6 +147,10 @@ class BaseConfig(BaseModel):
     auto_update: bool = Field(
         default=True,
         description="Enable automatic updates for the application",
+    )
+    caching: CacheConfig = Field(
+        default_factory=CacheConfig,
+        description="Caching configuration",
     )
 
     @field_validator("ecdsa_private_key_store_path")

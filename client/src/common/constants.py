@@ -2,6 +2,9 @@ import os
 import json
 from pathlib import Path
 
+ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
+ADDRESS_REGEXP = r"^0x[a-fA-F0-9]{40}$"
+
 ROOT_DIR = Path(__file__).parent.parent.parent.parent
 CLIENT_PATH = ROOT_DIR / "client"
 CLIENT_SRC_PATH = CLIENT_PATH / "src"
@@ -18,22 +21,6 @@ LOCAL_EZKL_PATH = Path(
 MODELS_DATA_DIR.mkdir(parents=True, exist_ok=True)
 TEMP_FOLDER.mkdir(parents=True, exist_ok=True)
 PROOFS_FOLDER.mkdir(parents=True, exist_ok=True)
-
-# contracts addresses:
-with open(CONTRACTS_DIR / "deployments" / "sertnDeployment.json") as f:
-    deployment_info = json.load(f)
-    TASK_MANAGER_ADDRESS = deployment_info["sertnTaskManager"]
-    SERVICE_MANAGER_ADDRESS = deployment_info["sertnServiceManager"]
-    ALLOCATION_MANAGER_ADDRESS = deployment_info["allocationManager"]
-    STRATEGIES_ADDRESSES = [
-        deployment_info["strategy_0"],
-        deployment_info["strategy_1"],
-        deployment_info["strategy_2"],
-    ]
-    ETH_STRATEGY_ADDRESSES = [
-        deployment_info["eth_strategy_0"],
-        deployment_info["eth_strategy_1"],
-    ]
 
 IGNORED_MODEL_HASHES = []
 
@@ -52,4 +39,8 @@ MAXIMUM_SCORE_MEDIAN_SAMPLE = 0.05
 CIRCUIT_TIMEOUT_SECONDS = 60
 
 # Operator set ID
+# `OperatorSet` is a struct in the AllocationManager contract that groups operators within AVS.
+# It contains only an ID (uint256) and an AVS address (address).
+# At the time of writing, we only have one AVS, so we use the default ID of 0.
+# If multiple AVSs are introduced in the future, this will need to be updated accordingly.
 OPERATOR_SET_ID = 0

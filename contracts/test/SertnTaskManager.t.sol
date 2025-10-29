@@ -428,6 +428,309 @@ contract SertnTaskManagerTest is Test {
         assertEq(taskManager.taskNonce(), task.nonce + 2);
     }
 
+    // === HISTORY TESTS ===
+
+    function test_getTasksByModel() public {
+        // Create a second model for testing
+        vm.startPrank(owner);
+        uint256 modelId2 = modelRegistry.createNewModel(
+            address(new MockVerifier()),
+            IModelRegistry.VerificationStrategy.Onchain,
+            "test_model_2",
+            200,
+            20
+        );
+        vm.stopPrank();
+
+        // Send tasks for both models
+        ISertnTaskManager.Task memory task1 = _createValidTask();
+        vm.prank(aggregator);
+        taskManager.sendTask(task1);
+
+        ISertnTaskManager.Task memory task2 = _createValidTask();
+        task2.modelId = modelId2;
+        task2.nonce = 2;
+        vm.prank(aggregator);
+        taskManager.sendTask(task2);
+
+        ISertnTaskManager.Task memory task3 = _createValidTask();
+        task3.nonce = 3;
+        vm.prank(aggregator);
+        taskManager.sendTask(task3);
+
+        // Get tasks for first model (should have 2 tasks: task1 and task3)
+        uint256[] memory tasksModel1 = taskManager.getTasksByModel(modelId, 0, 10);
+        assertEq(tasksModel1.length, 2, "Model 1 should have 2 tasks");
+        assertTrue(
+            (tasksModel1[0] == 1 && tasksModel1[1] == 3) ||
+                (tasksModel1[0] == 3 && tasksModel1[1] == 1),
+            "Should contain correct task IDs for model 1"
+        );
+
+        // Get tasks for second model (should have 1 task: task2)
+        uint256[] memory tasksModel2 = taskManager.getTasksByModel(modelId2, 0, 10);
+        assertEq(tasksModel2.length, 1, "Model 2 should have 1 task");
+        assertEq(tasksModel2[0], 2, "Should contain correct task ID for model 2");
+    }
+
+    function test_getTasksByModel_pagination() public {
+        // Send 5 tasks with the same model
+        for (uint256 i = 0; i < 5; i++) {
+            ISertnTaskManager.Task memory task = _createValidTask();
+            task.nonce = i + 1;
+            vm.prank(aggregator);
+            taskManager.sendTask(task);
+        }
+
+        // Test pagination - first page (limit 3)
+        uint256[] memory page1 = taskManager.getTasksByModel(modelId, 0, 3);
+        assertEq(page1.length, 3, "First page should have 3 items");
+        assertEq(page1[0], 5, "First item should be task 5");
+        assertEq(page1[1], 4, "Second item should be task 4");
+        assertEq(page1[2], 3, "Third item should be task 3");
+
+        // Test pagination - second page (offset 3, limit 3)
+        uint256[] memory page2 = taskManager.getTasksByModel(modelId, 3, 3);
+        assertEq(page2.length, 2, "Second page should have 2 remaining items");
+        assertEq(page2[0], 2, "First item on page 2 should be task 2");
+        assertEq(page2[1], 1, "Second item on page 2 should be task 1");
+
+        // Test pagination - beyond available data
+        uint256[] memory page3 = taskManager.getTasksByModel(modelId, 10, 3);
+        assertEq(page3.length, 0, "Should return empty array when offset is beyond data");
+    }
+
+    function test_getTasksByOperator() public {
+        address operator2 = vm.addr(100);
+
+        // Setup allocation for second operator
+        vm.startPrank(owner);
+        OperatorSet[] memory sets = new OperatorSet[](1);
+        sets[0] = OperatorSet({id: 2, avs: address(0)});
+        mockAllocationManager.setAllocatedSets(operator2, sets);
+
+        IStrategy[] memory strategies = new IStrategy[](1);
+        strategies[0] = mockStrategy;
+        mockAllocationManager.setAllocatedStrategies(operator2, sets[0], strategies);
+        vm.stopPrank();
+
+        // Send tasks for different operators
+        ISertnTaskManager.Task memory task1 = _createValidTask();
+        vm.prank(aggregator);
+        taskManager.sendTask(task1);
+
+        ISertnTaskManager.Task memory task2 = _createValidTask();
+        task2.operator = operator2;
+        task2.nonce = 2;
+        vm.prank(aggregator);
+        taskManager.sendTask(task2);
+
+        ISertnTaskManager.Task memory task3 = _createValidTask();
+        task3.nonce = 3;
+        vm.prank(aggregator);
+        taskManager.sendTask(task3);
+
+        // Get tasks for first operator (should have 2 tasks)
+        uint256[] memory tasksOp1 = taskManager.getTasksByOperator(operator, 0, 10);
+        assertEq(tasksOp1.length, 2, "Operator 1 should have 2 tasks");
+
+        // Get tasks for second operator (should have 1 task)
+        uint256[] memory tasksOp2 = taskManager.getTasksByOperator(operator2, 0, 10);
+        assertEq(tasksOp2.length, 1, "Operator 2 should have 1 task");
+        assertEq(tasksOp2[0], 2, "Should contain correct task ID for operator 2");
+
+        // Get tasks for an operator with no tasks
+        address unknownOperator = vm.addr(999);
+        uint256[] memory tasks = taskManager.getTasksByOperator(unknownOperator, 0, 10);
+        assertEq(tasks.length, 0, "Should return empty array for operator with no tasks");
+    }
+
+    function test_getTasksByUser() public {
+        address user2 = vm.addr(200);
+
+        // Send tasks for different users
+        ISertnTaskManager.Task memory task1 = _createValidTask();
+        vm.prank(aggregator);
+        taskManager.sendTask(task1);
+
+        ISertnTaskManager.Task memory task2 = _createValidTask();
+        task2.user = user2;
+        task2.nonce = 2;
+        vm.prank(aggregator);
+        taskManager.sendTask(task2);
+
+        ISertnTaskManager.Task memory task3 = _createValidTask();
+        task3.nonce = 3;
+        vm.prank(aggregator);
+        taskManager.sendTask(task3);
+
+        // Get tasks for first user (should have 2 tasks)
+        uint256[] memory tasksUser1 = taskManager.getTasksByUser(user, 0, 10);
+        assertEq(tasksUser1.length, 2, "User 1 should have 2 tasks");
+
+        // Get tasks for second user (should have 1 task)
+        uint256[] memory tasksUser2 = taskManager.getTasksByUser(user2, 0, 10);
+        assertEq(tasksUser2.length, 1, "User 2 should have 1 task");
+        assertEq(tasksUser2[0], 2, "Should contain correct task ID for user 2");
+
+        // Get tasks for an user with no tasks
+        address unknownUser = vm.addr(999);
+        uint256[] memory tasks = taskManager.getTasksByUser(unknownUser, 0, 10);
+        assertEq(tasks.length, 0, "Should return empty array for user with no tasks");
+    }
+
+    function test_getTasksByState_assigned() public {
+        // Send tasks with different states
+        ISertnTaskManager.Task memory task1 = _createValidTask();
+        vm.prank(aggregator);
+        taskManager.sendTask(task1); // This will be in ASSIGNED state
+
+        ISertnTaskManager.Task memory task2 = _createValidTask();
+        task2.nonce = 2;
+        vm.prank(aggregator);
+        taskManager.sendTask(task2); // This will be in ASSIGNED state
+
+        // Get tasks in ASSIGNED state (should be 2)
+        uint256[] memory assignedTasks = taskManager.getTasksByState(
+            ISertnTaskManager.TaskState.ASSIGNED,
+            0,
+            10
+        );
+        assertEq(assignedTasks.length, 2, "Should have 2 task in ASSIGNED state");
+
+        // Complete one task
+        vm.prank(operator);
+        taskManager.submitTaskOutput(1, "output");
+
+        // Get tasks in ASSIGNED state (should be 1)
+        assignedTasks = taskManager.getTasksByState(ISertnTaskManager.TaskState.ASSIGNED, 0, 10);
+        assertEq(assignedTasks.length, 1, "Should have 1 task in ASSIGNED state");
+        assertEq(assignedTasks[0], 2, "Task 2 should be in ASSIGNED state");
+
+        // Get tasks in COMPLETED state (should be 1)
+        uint256[] memory completedTasks = taskManager.getTasksByState(
+            ISertnTaskManager.TaskState.COMPLETED,
+            0,
+            10
+        );
+        assertEq(completedTasks.length, 1, "Should have 1 task in COMPLETED state");
+        assertEq(completedTasks[0], 1, "Task 1 should be in COMPLETED state");
+
+        // Get tasks in REJECTED state (should be 0)
+        uint256[] memory rejectedTasks = taskManager.getTasksByState(
+            ISertnTaskManager.TaskState.REJECTED,
+            0,
+            10
+        );
+        assertEq(rejectedTasks.length, 0, "Should have 0 tasks in REJECTED state");
+    }
+
+    function test_getTaskHistoryStats_global() public {
+        // Send and process several tasks with different outcomes
+
+        // Task 1: Send and resolve
+        ISertnTaskManager.Task memory task1 = _createValidTask();
+        task1.nonce = 1;
+        vm.prank(aggregator);
+        taskManager.sendTask(task1);
+
+        vm.prank(operator);
+        taskManager.submitTaskOutput(task1.nonce, "output1");
+
+        vm.prank(aggregator);
+        taskManager.challengeTask(task1.nonce);
+
+        vm.prank(aggregator);
+        taskManager.resolveTask(task1.nonce, true); // RESOLVED
+
+        // Task 2: Send and reject
+        ISertnTaskManager.Task memory task2 = _createValidTask();
+        task2.nonce = 2;
+        vm.prank(aggregator);
+        taskManager.sendTask(task2);
+
+        vm.prank(operator);
+        taskManager.submitTaskOutput(2, "output2");
+
+        vm.prank(aggregator);
+        taskManager.challengeTask(2);
+
+        vm.prank(aggregator);
+        taskManager.resolveTask(2, false); // REJECTED
+
+        // Task 3: Send and leave pending
+        ISertnTaskManager.Task memory task3 = _createValidTask();
+        task3.nonce = 3;
+        vm.prank(aggregator);
+        taskManager.sendTask(task3); // ASSIGNED (pending)
+
+        // Get global stats (all parameters zero/null)
+        (
+            uint256 totalTasks,
+            uint256 resolvedTasks,
+            uint256 rejectedTasks,
+            uint256 pendingTasksCount
+        ) = taskManager.getTaskHistoryStats();
+
+        assertEq(totalTasks, 3, "Should have 3 total tasks");
+        assertEq(resolvedTasks, 1, "Should have 1 resolved task");
+        assertEq(rejectedTasks, 1, "Should have 1 rejected task");
+        assertEq(pendingTasksCount, 1, "Should have 1 pending task");
+    }
+
+    function test_task_history_tracking_on_send() public {
+        // Send a task and verify it's tracked in all relevant mappings
+        ISertnTaskManager.Task memory task = _createValidTask();
+        vm.prank(aggregator);
+        taskManager.sendTask(task);
+
+        // Verify task is in model history
+        uint256[] memory modelTasks = taskManager.getTasksByModel(modelId, 0, 10);
+        assertEq(modelTasks.length, 1, "Task should be tracked in model history");
+        assertEq(modelTasks[0], 1, "Task ID should match");
+
+        // Verify task is in operator history
+        uint256[] memory operatorTasks = taskManager.getTasksByOperator(operator, 0, 10);
+        assertEq(operatorTasks.length, 1, "Task should be tracked in operator history");
+        assertEq(operatorTasks[0], 1, "Task ID should match");
+
+        // Verify task is in user history
+        uint256[] memory userTasks = taskManager.getTasksByUser(user, 0, 10);
+        assertEq(userTasks.length, 1, "Task should be tracked in user history");
+        assertEq(userTasks[0], 1, "Task ID should match");
+
+        // Verify task is in state history
+        uint256[] memory stateTasks = taskManager.getTasksByState(
+            ISertnTaskManager.TaskState.ASSIGNED,
+            0,
+            10
+        );
+        assertEq(stateTasks.length, 1, "Task should be tracked in state history");
+        assertEq(stateTasks[0], 1, "Task ID should match");
+    }
+
+    function test_pagination_edge_cases() public {
+        // Test empty results with various offset/limit combinations
+        uint256[] memory empty1 = taskManager.getTasksByModel(modelId, 0, 0);
+        assertEq(empty1.length, 0, "Should return empty array with limit 0");
+
+        uint256[] memory empty2 = taskManager.getTasksByModel(modelId, 100, 10);
+        assertEq(empty2.length, 0, "Should return empty array with high offset");
+
+        // Send one task
+        ISertnTaskManager.Task memory task = _createValidTask();
+        vm.prank(aggregator);
+        taskManager.sendTask(task);
+
+        // Test with offset equal to array length
+        uint256[] memory edge1 = taskManager.getTasksByModel(modelId, 1, 10);
+        assertEq(edge1.length, 0, "Should return empty array when offset equals array length");
+
+        // Test with limit larger than remaining items
+        uint256[] memory edge2 = taskManager.getTasksByModel(modelId, 0, 100);
+        assertEq(edge2.length, 1, "Should return all available items when limit is larger");
+    }
+
     // Helper function to create a valid task
     function _createValidTask() internal view returns (ISertnTaskManager.Task memory) {
         return

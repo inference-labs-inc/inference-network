@@ -1,73 +1,100 @@
-import asyncio
-import threading
 import time
 
-import uvicorn
+import requests
 
 from aggregator.main import Aggregator
 from avs_operator.main import TaskOperator
-from common.constants import STRATEGIES_ADDRESSES
+from common.addresses import addresses
 from common.contract_constants import TaskStateMap, TaskStructMap
 from management.owner import AvsOwner
 
 
 class TestWorkflow:
 
-    def start_aggregator_server(self, aggregator: Aggregator):
-        self._stop_event = threading.Event()
-        config = uvicorn.Config(
-            app=aggregator.server.app, host="0.0.0.0", port=8090, log_level="info"
-        )
-        self.server = uvicorn.Server(config)
-
-        # Run server until stop event is set
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-        try:
-            loop.run_until_complete(self.server.serve())
-        except asyncio.CancelledError:
-            pass
-        finally:
-            loop.close()
-
-    def stop_aggregator_server(self):
-        """Stop server thread"""
-        if self.server:
-            self.server.should_exit = True
-        self._stop_event.set()
+    def make_request(self, path, **params):
+        params = {"limit": 100, "offset": 0, "include_details": False, **params}
+        res = requests.get(f"http://localhost:8090/{path}", params=params)
+        assert res.status_code == 200
+        return res.json()
 
     def test_process_task(
         self,
         aggregator: Aggregator,
+        aggregator_server: Aggregator,
         operator: TaskOperator,
         owner: AvsOwner,
         init_environment: dict,
+        strategies: list,
     ):
-        """Just a smoke test to ensure send_new_task runs without errors"""
+        """
+        Simulate end-to-end task processing workflow:
+        - Create a new task
+        - Operator processes the task
+        - Aggregator challenges the task
+        - Operator generates proof
+        - Aggregator resolves the task
+        - Verify rewards distribution
+        """
+        # get underlying token address for the future task
+        token_address = strategies[0].functions.underlyingToken().call()
+
+        # Get the operator's fees before processing the task
+        res = self.make_request("fees", hours=24)
+        base_operator_fee = (
+            res["rewards_by_operator"]
+            .get(operator.operator_address, {})
+            .get(token_address, {})
+            .get("operator_share", 0)
+        )
 
         # create a new task
         task_id = aggregator.send_new_task(1)
         assert task_id is not None, "Task ID should not be None"
-        # here task  should be assigned to the operator
+
+        # here task should be assigned to the operator
+        res = self.make_request(
+            "operator-inference-history", operator=operator.operator_address
+        )
+        assert task_id in res["tasks"]
+
+        # check that the task is visible in the stats endpoint
+        res = self.make_request(
+            "state-inference-history", state=TaskStateMap.ASSIGNED.value
+        )
+        assert task_id in res["tasks"]
 
         # process the task by the operator
         processed_count = operator.listen_for_events(loop_running=False)
         assert processed_count == 1, "Operator should process one task"
         # the task should be marked as completed
 
+        # check that the task is not visible in the assigned state
+        res = self.make_request(
+            "state-inference-history", state=TaskStateMap.ASSIGNED.value
+        )
+        assert task_id not in res["tasks"]
+        # and is visible in the completed state
+        res = self.make_request(
+            "state-inference-history", state=TaskStateMap.COMPLETED.value
+        )
+        assert task_id in res["tasks"]
+
         # checkout the completed task
         processed_count = aggregator.listen_for_events(loop_running=False)
         assert processed_count == 1, "Aggregator should process one task"
         # At this point the task should be challenged
 
-        # start aggregator server in a separate thread
-        # This is necessary to allow the aggregator to listen for events and process the challenge
-        aggregator_server = threading.Thread(
-            target=self.start_aggregator_server, args=[aggregator]
-        )
-        aggregator_server.start()
         time.sleep(5)
+        # Check that the task is not visible in the completed state
+        res = self.make_request(
+            "state-inference-history", state=TaskStateMap.COMPLETED.value
+        )
+        assert task_id not in res["tasks"]
+        # and is visible in the challenged state
+        res = self.make_request(
+            "state-inference-history", state=TaskStateMap.CHALLENGED.value
+        )
+        assert task_id in res["tasks"]
 
         # check events by the operator, it should process the challenge and generate proof
         processed_count = operator.listen_for_events(loop_running=False)
@@ -78,6 +105,27 @@ class TestWorkflow:
         task = aggregator.eth_client.task_manager.functions.getTask(task_id).call()
         assert task[TaskStructMap.STATE] == TaskStateMap.RESOLVED
         model_id = task[TaskStructMap.MODEL_ID]
+        user = task[TaskStructMap.USER]
+
+        # Check that the model is not visible in the challenged state
+        res = self.make_request(
+            "state-inference-history", state=TaskStateMap.CHALLENGED.value
+        )
+        assert task_id not in res["tasks"]
+        # and is visible in the resolved state
+        res = self.make_request(
+            "state-inference-history",
+            state=TaskStateMap.RESOLVED.value,
+            limit=1,
+            offset=0,
+        )
+        assert [task_id] == res["tasks"]
+        # and the task is visible in the model-specific history
+        res = self.make_request("model-inference-history", model_id=model_id)
+        assert task_id in res["tasks"]
+        # and the task is visible in the user-specific history
+        res = self.make_request("user-inference-history", user=user, limit=1, offset=0)
+        assert [task_id] == res["tasks"]
 
         # check rewards collected for the operator
         operators_in_interval: list = (
@@ -94,7 +142,7 @@ class TestWorkflow:
         rewards = aggregator.eth_client.service_manager.functions.getIntervalRewards(
             init_environment["current_interval"],
             operator.operator_address,
-            STRATEGIES_ADDRESSES[0],
+            addresses.STRATEGIES_ADDRESSES[0],
         ).call()
         model_cost: int = aggregator.eth_client.model_registry.functions.computeCost(
             model_id
@@ -103,7 +151,7 @@ class TestWorkflow:
             operator.operator_address,
         ], "Operator should be in the current interval"
         assert strategies_in_interval == [
-            STRATEGIES_ADDRESSES[0],
+            addresses.STRATEGIES_ADDRESSES[0],
         ], "Aggregator should be in the current interval"
         assert (
             rewards == model_cost
@@ -118,13 +166,22 @@ class TestWorkflow:
         # Submit rewards for the interval
         owner.submit_rewards_for_interval(init_environment["current_interval"])
 
-        self.stop_aggregator_server()
-        if aggregator_server:
-            aggregator_server.join(timeout=5)  # Wait up to 5 seconds
+        # Check the fees accumulated during the interval (smoke test)
+        res = self.make_request("fees", hours=24)
+        updated_operator_fee = (
+            res["rewards_by_operator"]
+            .get(operator.operator_address, {})
+            .get(token_address, {})
+            .get("operator_share", 0)
+        )
+        assert (
+            updated_operator_fee > base_operator_fee
+        ), "Operator's fees should increase after processing the task"
 
     def test_task_incorrect_proof(
         self,
         aggregator: Aggregator,
+        aggregator_server: Aggregator,
         operator: TaskOperator,
         owner: AvsOwner,
         init_environment: dict,
@@ -138,14 +195,14 @@ class TestWorkflow:
         operator.generate_proof_for_task = mock_generate_proof_for_task
         initial_shares = (
             aggregator.eth_client.delegation_manager.functions.operatorShares(
-                operator.operator_address, STRATEGIES_ADDRESSES[0]
+                operator.operator_address, addresses.STRATEGIES_ADDRESSES[0]
             ).call()
         )
         initial_rewards = (
             aggregator.eth_client.service_manager.functions.getIntervalRewards(
                 init_environment["current_interval"],
                 operator.operator_address,
-                STRATEGIES_ADDRESSES[0],
+                addresses.STRATEGIES_ADDRESSES[0],
             ).call()
         )
 
@@ -164,12 +221,6 @@ class TestWorkflow:
         assert processed_count == 1, "Aggregator should process one task"
         # At this point the task should be challenged
 
-        # start aggregator server in a separate thread
-        # This is necessary to allow the aggregator to listen for events and process the challenge
-        aggregator_server = threading.Thread(
-            target=self.start_aggregator_server, args=[aggregator]
-        )
-        aggregator_server.start()
         time.sleep(5)
 
         # check events by the operator, it should process the challenge and generate proof
@@ -180,7 +231,17 @@ class TestWorkflow:
         # here the task should be resolved by the aggregator
         task = aggregator.eth_client.task_manager.functions.getTask(task_id).call()
         assert task[TaskStructMap.STATE] == TaskStateMap.REJECTED.value
-        # model_id = task[TaskStructMap.MODEL_ID]
+
+        # Check that the task is not visible in the challenged state
+        res = self.make_request(
+            "state-inference-history", state=TaskStateMap.CHALLENGED.value
+        )
+        assert task_id not in res["tasks"]
+        # and is visible in the rejected state
+        res = self.make_request(
+            "state-inference-history", state=TaskStateMap.REJECTED.value
+        )
+        assert task_id in res["tasks"]
 
         # check rewards collected for the operator
         operators_in_interval: list = (
@@ -194,7 +255,7 @@ class TestWorkflow:
 
         final_shares = (
             aggregator.eth_client.delegation_manager.functions.operatorShares(
-                operator.operator_address, STRATEGIES_ADDRESSES[0]
+                operator.operator_address, addresses.STRATEGIES_ADDRESSES[0]
             ).call()
         )
         assert (
@@ -205,11 +266,20 @@ class TestWorkflow:
             aggregator.eth_client.service_manager.functions.getIntervalRewards(
                 init_environment["current_interval"],
                 operator.operator_address,
-                STRATEGIES_ADDRESSES[0],
+                addresses.STRATEGIES_ADDRESSES[0],
             ).call()
         )
         assert final_rewards == initial_rewards, "No new rewards for the operator"
 
-        self.stop_aggregator_server()
-        if aggregator_server:
-            aggregator_server.join(timeout=5)  # Wait up to 5 seconds
+    def test_tvl_endpoint(self, aggregator_server):
+        """
+        Just a smoke test to ensure /tvl endpoint works and returns expected fields
+        """
+        response = requests.get("http://localhost:8090/tvl")
+        assert response.status_code == 200
+        data = response.json()
+        assert "tvl_by_operator" in data
+        assert "tvl_by_strategy" in data
+        assert data["total_operators"] == 1
+        assert data["active_operators"] == 1
+        assert data["strategies_count"] == 5

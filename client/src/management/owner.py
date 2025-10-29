@@ -1,5 +1,6 @@
 from eth_account import Account
 
+from common.addresses import addresses
 from common.eth import EthereumClient
 from common.config import GasStrategy
 from common.logging import get_logger
@@ -18,8 +19,10 @@ class AvsOwner:
         self,
         private_key: str,
         eth_rpc_url: str,
+        chain_id: int = 31337,
         gas_strategy: GasStrategy = GasStrategy.STANDARD,
     ):
+        addresses.init_addresses(chain_id=chain_id)
         self.private_key = private_key
         self.owner_address = Account.from_key(self.private_key).address
         self.gas_strategy = gas_strategy

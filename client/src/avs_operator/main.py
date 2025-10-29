@@ -12,11 +12,12 @@ from tqdm import tqdm
 from web3 import Web3
 
 from avs_operator.nodes import OperatorNodesManager
+from common.addresses import addresses
 from common.auto_update import AutoUpdate
 from common.config import OperatorConfig
-from common.logging import get_logger
 from common.contract_constants import TaskStructMap
 from common.eth import EthereumClient, load_ecdsa_private_key
+from common.logging import get_logger
 from models.onnx_run import run_onnx
 from models.proof.ezkl_handler import EZKLHandler
 
@@ -39,6 +40,7 @@ def run_operator(config: OperatorConfig) -> None:
 class TaskOperator:
     def __init__(self, config: OperatorConfig):
         self.config = config
+        addresses.init_addresses(chain_id=self.config.chain_id)
         self.eth_client = EthereumClient(
             eth_rpc_url=self.config.eth_rpc_url, gas_strategy=self.config.gas_strategy
         )

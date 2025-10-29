@@ -424,7 +424,7 @@
   },
   {
     "type": "function",
-    "name": "taskCompleted",
+    "name": "taskResolved",
     "inputs": [
       {
         "name": "_operator",
@@ -555,6 +555,12 @@
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
+      },
+      {
+        "name": "token",
+        "type": "address",
+        "indexed": false,
+        "internalType": "contract IERC20"
       },
       {
         "name": "currentInterval",

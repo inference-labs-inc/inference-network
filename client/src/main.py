@@ -57,13 +57,12 @@ def start(
         raise typer.Exit(1)
 
     ensure_external_files()
+    config_obj = load_config(config, mode)
 
     try:
         if mode == "operator":
-            config_obj = load_config(config, "operator")
             run_operator(config_obj)
         elif mode == "aggregator":
-            config_obj = load_config(config, "aggregator")
             run_aggregator(config_obj)
         else:
             logger.error(f"Invalid mode: {mode}. Use 'operator' or 'aggregator'")

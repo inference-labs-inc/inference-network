@@ -19,11 +19,7 @@ from common.abis import (
 )
 from common.config import GasStrategy
 from common.logging import get_logger
-from common.constants import (
-    ALLOCATION_MANAGER_ADDRESS,
-    SERVICE_MANAGER_ADDRESS,
-    TASK_MANAGER_ADDRESS,
-)
+from common.addresses import addresses
 from common.gas_strategy import get_gas_config
 
 logger = get_logger("common")
@@ -72,14 +68,14 @@ class EthereumClient:
         Initialize contracts
         """
         # Service manager
-        self.check_contract_deployed(SERVICE_MANAGER_ADDRESS)
+        self.check_contract_deployed(addresses.SERVICE_MANAGER_ADDRESS)
         self.service_manager = self.w3.eth.contract(
-            address=SERVICE_MANAGER_ADDRESS, abi=SERVICE_MANAGER_ABI
+            address=addresses.SERVICE_MANAGER_ADDRESS, abi=SERVICE_MANAGER_ABI
         )
         # Task manager
-        self.check_contract_deployed(TASK_MANAGER_ADDRESS)
+        self.check_contract_deployed(addresses.TASK_MANAGER_ADDRESS)
         self.task_manager = self.w3.eth.contract(
-            address=TASK_MANAGER_ADDRESS, abi=TASK_MANAGER_ABI
+            address=addresses.TASK_MANAGER_ADDRESS, abi=TASK_MANAGER_ABI
         )
         # Delegation manager
         delegation_manager_address = (
@@ -100,9 +96,9 @@ class EthereumClient:
             abi=STRATEGY_MANAGER_ABI,
         )
         # allocation manager
-        self.check_contract_deployed(ALLOCATION_MANAGER_ADDRESS)
+        self.check_contract_deployed(addresses.ALLOCATION_MANAGER_ADDRESS)
         self.allocation_manager = self.w3.eth.contract(
-            address=ALLOCATION_MANAGER_ADDRESS,
+            address=addresses.ALLOCATION_MANAGER_ADDRESS,
             abi=ALLOCATION_MANAGER_ABI,
         )
         # Model registry

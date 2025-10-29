@@ -120,4 +120,75 @@ interface ISertnTaskManager {
      * @param proof The proof of completion
      */
     function submitProofForTask(uint256 taskId, bytes calldata proof) external;
+
+    // === TASK HISTORY QUERY FUNCTIONS ===
+
+    /**
+     * @notice Get paginated task IDs for a specific model
+     * @param modelId The model ID to query
+     * @param offset Starting index
+     * @param limit Maximum number of results
+     * @return Array of task IDs (paginated)
+     */
+    function getTasksByModel(
+        uint256 modelId,
+        uint256 offset,
+        uint256 limit
+    ) external view returns (uint256[] memory);
+
+    /**
+     * @notice Get paginated task IDs for a specific operator
+     * @param operator The operator address to query
+     * @param offset Starting index
+     * @param limit Maximum number of results
+     * @return Array of task IDs (paginated)
+     */
+    function getTasksByOperator(
+        address operator,
+        uint256 offset,
+        uint256 limit
+    ) external view returns (uint256[] memory);
+
+    /**
+     * @notice Get paginated task IDs for a specific user
+     * @param user The user address to query
+     * @param offset Starting index
+     * @param limit Maximum number of results
+     * @return Array of task IDs (paginated)
+     */
+    function getTasksByUser(
+        address user,
+        uint256 offset,
+        uint256 limit
+    ) external view returns (uint256[] memory);
+
+    /**
+     * @notice Get paginated task IDs for a specific state
+     * @param state The task state to query
+     * @param offset Starting index
+     * @param limit Maximum number of results
+     * @return Array of task IDs (paginated)
+     */
+    function getTasksByState(
+        TaskState state,
+        uint256 offset,
+        uint256 limit
+    ) external view returns (uint256[] memory);
+
+    /**
+     * @notice Get task history counts for overview statistics
+     * @return totalTasks Total number of tasks
+     * @return completedTasks Number of completed/resolved tasks
+     * @return rejectedTasks Number of rejected tasks
+     * @return pendingTasks Number of pending/assigned/challenged tasks
+     */
+    function getTaskHistoryStats()
+        external
+        view
+        returns (
+            uint256 totalTasks,
+            uint256 completedTasks,
+            uint256 rejectedTasks,
+            uint256 pendingTasks
+        );
 }

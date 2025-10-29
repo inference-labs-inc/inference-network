@@ -149,7 +149,10 @@ contract SertnDeployer is Script, Test {
                 address(_ethStrategies[i])
             );
         }
-        vm.writeFile("deployments/sertnDeployment.json", json);
+        vm.writeFile(
+            string.concat("deployments/sertnDeployment_", Strings.toString(block.chainid), ".json"),
+            json
+        );
 
         vm.stopBroadcast();
     }

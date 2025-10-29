@@ -1,18 +1,24 @@
+import asyncio
 import json
 import os
 import shutil
 import sys
 import tempfile
+import threading
+import time
 from pathlib import Path
 
 import pytest
 import requests
+import uvicorn
 from dotenv import load_dotenv
 from eth_account import Account
 from web3 import Web3
 
 from aggregator.main import Aggregator
 from avs_operator.main import TaskOperator
+from common.abis import STRATEGY_ABI
+from common.addresses import addresses
 from common.config import AggregatorConfig, OperatorConfig
 from common.constants import CLIENT_SRC_PATH, ROOT_DIR
 from management.owner import AvsOwner
@@ -20,12 +26,36 @@ from management.owner import AvsOwner
 sys.path.insert(0, str(CLIENT_SRC_PATH))
 load_dotenv(ROOT_DIR / ".env")  # Load environment variables
 
+OPERATOR_NODES = [
+    {
+        "node_name": "node1",
+        "metadata": "optional metadata",
+        "total_fucus": 500,
+        "is_active": True,
+        "models": [
+            {"model_name": "model_0", "allocated_fucus": 500},
+            # {"model_name": "model_1", "allocated_fucus": 50},
+        ],
+    },
+    {
+        "node_name": "node2",
+        "metadata": "optional metadata",
+        "total_fucus": 900,
+        "is_active": True,
+        "models": [
+            {"model_name": "model_0", "allocated_fucus": 900},
+            # {"model_name": "model_1", "allocated_fucus": 10},
+        ],
+    },
+]
+
 
 @pytest.fixture(scope="session")
 def owner():
     return AvsOwner(
         private_key=os.getenv("PRIVATE_KEY"),
         eth_rpc_url="http://localhost:8545",
+        chain_id=31337,
     )
 
 
@@ -37,8 +67,51 @@ def aggregator():
         ecdsa_private_key_store_path="tests/keys/aggregator.ecdsa.key.json",
         proof_request_probability=1.0,  # challenge every task
         auto_update=False,
+        caching={"disable": True},
     )
     return Aggregator(config)
+
+
+@pytest.fixture(scope="session")
+def aggregator_server(aggregator: Aggregator):
+    """Start aggregator server in a separate thread and provide cleanup."""
+    server = None
+    server_thread = None
+
+    def start_server():
+        nonlocal server
+        config = uvicorn.Config(
+            app=aggregator.server.app,
+            host="0.0.0.0",
+            port=8090,
+            log_level="info",
+        )
+        server = uvicorn.Server(config)
+
+        # Run server until stop event is set
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        try:
+            loop.run_until_complete(server.serve())
+        except asyncio.CancelledError:
+            pass
+        finally:
+            loop.close()
+
+    # Start server in a separate thread
+    server_thread = threading.Thread(target=start_server)
+    server_thread.start()
+    time.sleep(5)  # Wait for server to start
+
+    yield aggregator
+
+    # Cleanup - stop server
+    if server:
+        server.should_exit = True
+
+    if server_thread:
+        server_thread.join(timeout=5)  # Wait up to 5 seconds
 
 
 @pytest.fixture(scope="function")
@@ -48,28 +121,8 @@ def operator():
         aggregator_server_ip_port_address="localhost:8090",
         ecdsa_private_key_store_path="tests/keys/operator.ecdsa.key.json",
         auto_update=False,
-        nodes=[
-            {
-                "node_name": "node1",
-                "metadata": "optional metadata",
-                "total_fucus": 500,
-                "is_active": True,
-                "models": [
-                    {"model_name": "model_0", "allocated_fucus": 500},
-                    # {"model_name": "model_1", "allocated_fucus": 50},
-                ],
-            },
-            {
-                "node_name": "node2",
-                "metadata": "optional metadata",
-                "total_fucus": 900,
-                "is_active": True,
-                "models": [
-                    {"model_name": "model_0", "allocated_fucus": 900},
-                    # {"model_name": "model_1", "allocated_fucus": 10},
-                ],
-            },
-        ],
+        nodes=OPERATOR_NODES,
+        caching={"disable": True},
     )
     operator = TaskOperator(config)
     operator.nodes_manager.sync_nodes()
@@ -196,3 +249,12 @@ def dummy_address() -> str:
     """Return a valid EIP-55 Ethereum address for tests."""
     raw = "0x" + os.urandom(20).hex()
     return Web3.to_checksum_address(raw)
+
+
+@pytest.fixture(scope="function")
+def strategies(aggregator: Aggregator):
+    """Return list of strategy contract objects."""
+    return [
+        aggregator.eth_client.w3.eth.contract(address=addr, abi=STRATEGY_ABI)
+        for addr in addresses.STRATEGIES_ADDRESSES
+    ]

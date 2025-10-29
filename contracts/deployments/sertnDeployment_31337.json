@@ -1,0 +1,12 @@
+{
+    "allocationManager": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
+    "eth_strategy_0": "0x5E3d0fdE6f793B3115A9E7f5EBC195bbeeD35d6C",
+    "eth_strategy_1": "0xa12fFA0B9f159BB4C54bce579611927Addc51610",
+    "rewardsCoordinator": "0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0",
+    "sertnRegistrar": "0x9d4454B023096f34B160D6B654540c56A1F81688",
+    "sertnServiceManager": "0x0E801D84Fa97b50751Dbf25036d067dCf18858bF",
+    "sertnTaskManager": "0x5eb3Bc0a489C5A8288765d2336659EbCA68FCd00",
+    "strategy_0": "0x53839913417ebc7171723489F29B9B54F49b4EEA",
+    "strategy_1": "0x5E3d0fdE6f793B3115A9E7f5EBC195bbeeD35d6C",
+    "strategy_2": "0xa12fFA0B9f159BB4C54bce579611927Addc51610"
+}

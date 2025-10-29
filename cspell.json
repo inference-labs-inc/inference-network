@@ -7,6 +7,7 @@
         "addfinalizer",
         "autouse",
         "avsregistry",
+        "bips",
         "blsagg",
         "CHAINID",
         "chainio",
@@ -24,6 +25,7 @@
         "keccak",
         "Localnet",
         "LSTM",
+        "Memorystore",
         "Offchain",
         "operatorsinfo",
         "pbar",
@@ -38,6 +40,7 @@
         "Slashable",
         "timespan",
         "tupple",
+        "urandom",
         "venv",
         "ZKML"
     ],

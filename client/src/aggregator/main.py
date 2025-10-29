@@ -12,6 +12,7 @@ from web3 import Web3
 from aggregator.errors import InvalidProofError
 from aggregator.server import AggregatorServer
 from common.abis import ERC20_ABI, STRATEGY_ABI
+from common.addresses import addresses
 from common.auto_update import AutoUpdate
 from common.config import AggregatorConfig
 from common.constants import (
@@ -31,6 +32,7 @@ logger = get_logger("aggregator")
 
 
 def run_aggregator(config: AggregatorConfig) -> None:
+    addresses.init_addresses(chain_id=config.chain_id)
     logger.info("Starting Sertn Aggregator...")
     aggregator = Aggregator(config=config)
     threading.Thread(target=aggregator.start_sending_new_tasks, args=[]).start()

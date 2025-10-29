@@ -11,6 +11,19 @@ interface IModelRegistry {
         Onchain,
         Offchain
     }
+
+    /**
+     * @notice Struct containing all model details
+     */
+    struct ModelDetails {
+        uint256 modelId;
+        string modelName;
+        address modelVerifier;
+        VerificationStrategy verificationStrategy;
+        uint256 computeCost;
+        uint256 requiredFUCUs;
+        bool isActive;
+    }
     /**
      * @notice The event emitted when a new model is created
      * @param modelId The id of the model
@@ -169,4 +182,10 @@ interface IModelRegistry {
      * @notice Check whether a model is active
      */
     function isActive(uint256 modelId) external view returns (bool);
+
+    /**
+     * @notice Get all active models with their complete details in a single call
+     * @return models Array of ModelDetails structs containing all active models
+     */
+    function getActiveModelsWithDetails() external view returns (ModelDetails[] memory models);
 }

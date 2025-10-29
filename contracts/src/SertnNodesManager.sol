@@ -524,4 +524,71 @@ contract SertnNodesManager is OwnableUpgradeable, ISertnNodesManager {
             availableFucus[i] = tempFucus[i];
         }
     }
+
+    /**
+     * @notice Get all nodes with their details and supported models in a single call
+     * @return nodeDetails Array of node details packed as uint256[8] arrays:
+     *         [0] nodeId, [1] operator (as uint256), [2] totalFucus, [3] allocatedFucus,
+     *         [4] availableFucus, [5] isActive (1/0), [6] createdAt, [7] supportedModelsCount
+     * @return supportedModels Array of arrays containing supported model IDs for each node
+     * @return modelAllocations Array of arrays containing FUCUS allocations for each model on each node
+     * @dev This function is gas-optimized for batch operations. String data (name, metadata)
+     *      lengths are returned but not the strings themselves to save gas. Use getNodeDetails
+     *      for individual nodes if string data is needed.
+     */
+    function getAllNodesWithDetails()
+        external
+        view
+        returns (
+            uint256[8][] memory nodeDetails,
+            uint256[][] memory supportedModels,
+            uint256[][] memory modelAllocations
+        )
+    {
+        // First pass: count valid nodes
+        uint256 validCount = 0;
+        for (uint256 i = 1; i < nextNodeId; i++) {
+            if (nodes[i].operator != address(0) && nodes[i].isActive) {
+                validCount++;
+            }
+        }
+
+        // Initialize return arrays
+        nodeDetails = new uint256[8][](validCount);
+        supportedModels = new uint256[][](validCount);
+        modelAllocations = new uint256[][](validCount);
+
+        // Second pass: populate data
+        uint256 index = 0;
+        for (uint256 i = 1; i < nextNodeId; i++) {
+            if (nodes[i].operator != address(0) && nodes[i].isActive) {
+                Node memory node = nodes[i];
+                uint256 allocated = getTotalAllocatedFucusForNode(i);
+                uint256 available = node.totalFucus > allocated ? node.totalFucus - allocated : 0;
+
+                // Pack node details into uint256 array
+                nodeDetails[index][0] = i; // nodeId
+                nodeDetails[index][1] = uint256(uint160(node.operator)); // operator as uint256
+                nodeDetails[index][2] = node.totalFucus;
+                nodeDetails[index][3] = allocated;
+                nodeDetails[index][4] = available;
+                nodeDetails[index][5] = node.isActive ? 1 : 0;
+                nodeDetails[index][6] = node.createdAt;
+                nodeDetails[index][7] = nodeSupportedModels[i].length(); // supportedModelsCount
+
+                // Get supported models and their allocations
+                uint256 modelCount = nodeSupportedModels[i].length();
+                supportedModels[index] = new uint256[](modelCount);
+                modelAllocations[index] = new uint256[](modelCount);
+
+                for (uint256 j = 0; j < modelCount; j++) {
+                    uint256 modelId = nodeSupportedModels[i].at(j);
+                    supportedModels[index][j] = modelId;
+                    modelAllocations[index][j] = nodeModelConfigs[i][modelId].allocatedFucus;
+                }
+
+                index++;
+            }
+        }
+    }
 }
