@@ -17,9 +17,10 @@ from web3 import Web3
 
 from aggregator.main import Aggregator
 from avs_operator.main import TaskOperator
-from common.config import AggregatorConfig, OperatorConfig
-from common.constants import CLIENT_SRC_PATH, ROOT_DIR, STRATEGIES_ADDRESSES
 from common.abis import STRATEGY_ABI
+from common.addresses import addresses
+from common.config import AggregatorConfig, OperatorConfig
+from common.constants import CLIENT_SRC_PATH, ROOT_DIR
 from management.owner import AvsOwner
 
 sys.path.insert(0, str(CLIENT_SRC_PATH))
@@ -54,6 +55,7 @@ def owner():
     return AvsOwner(
         private_key=os.getenv("PRIVATE_KEY"),
         eth_rpc_url="http://localhost:8545",
+        chain_id=31337,
     )
 
 
@@ -254,5 +256,5 @@ def strategies(aggregator: Aggregator):
     """Return list of strategy contract objects."""
     return [
         aggregator.eth_client.w3.eth.contract(address=addr, abi=STRATEGY_ABI)
-        for addr in STRATEGIES_ADDRESSES
+        for addr in addresses.STRATEGIES_ADDRESSES
     ]

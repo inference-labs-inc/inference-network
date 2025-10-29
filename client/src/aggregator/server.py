@@ -10,13 +10,11 @@ from common.abis import (
     ERC20_ABI,
     STRATEGY_ABI,
 )
+from common.addresses import addresses
 from common.cache import CacheBackend, cached_method, get_cache
 from common.constants import (
     ADDRESS_REGEXP,
-    ETH_STRATEGY_ADDRESSES,
     OPERATOR_SET_ID,
-    SERVICE_MANAGER_ADDRESS,
-    STRATEGIES_ADDRESSES,
 )
 from common.contract_constants import TaskStateMap, TaskStructMap
 from common.logging import get_logger
@@ -36,12 +34,15 @@ class ProofRequest(BaseModel):
 
 
 class AggregatorServer:
-    # List of all strategy addresses
-    strategies = STRATEGIES_ADDRESSES + ETH_STRATEGY_ADDRESSES
-    # OperatorSet is a struct with (avs, id)
-    operator_set = (SERVICE_MANAGER_ADDRESS, OPERATOR_SET_ID)
 
     def __init__(self, aggregator: "Aggregator"):
+        # List of all strategy addresses
+        self.strategies = (
+            addresses.STRATEGIES_ADDRESSES + addresses.ETH_STRATEGY_ADDRESSES
+        )
+        # OperatorSet is a struct with (avs, id)
+        self.operator_set = (addresses.SERVICE_MANAGER_ADDRESS, OPERATOR_SET_ID)
+
         self.aggregator = aggregator
         self.eth_client = aggregator.eth_client
         self.app = FastAPI()

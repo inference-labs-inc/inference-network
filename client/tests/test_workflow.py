@@ -4,7 +4,7 @@ import requests
 
 from aggregator.main import Aggregator
 from avs_operator.main import TaskOperator
-from common.constants import STRATEGIES_ADDRESSES
+from common.addresses import addresses
 from common.contract_constants import TaskStateMap, TaskStructMap
 from management.owner import AvsOwner
 
@@ -142,7 +142,7 @@ class TestWorkflow:
         rewards = aggregator.eth_client.service_manager.functions.getIntervalRewards(
             init_environment["current_interval"],
             operator.operator_address,
-            STRATEGIES_ADDRESSES[0],
+            addresses.STRATEGIES_ADDRESSES[0],
         ).call()
         model_cost: int = aggregator.eth_client.model_registry.functions.computeCost(
             model_id
@@ -151,7 +151,7 @@ class TestWorkflow:
             operator.operator_address,
         ], "Operator should be in the current interval"
         assert strategies_in_interval == [
-            STRATEGIES_ADDRESSES[0],
+            addresses.STRATEGIES_ADDRESSES[0],
         ], "Aggregator should be in the current interval"
         assert (
             rewards == model_cost
@@ -195,14 +195,14 @@ class TestWorkflow:
         operator.generate_proof_for_task = mock_generate_proof_for_task
         initial_shares = (
             aggregator.eth_client.delegation_manager.functions.operatorShares(
-                operator.operator_address, STRATEGIES_ADDRESSES[0]
+                operator.operator_address, addresses.STRATEGIES_ADDRESSES[0]
             ).call()
         )
         initial_rewards = (
             aggregator.eth_client.service_manager.functions.getIntervalRewards(
                 init_environment["current_interval"],
                 operator.operator_address,
-                STRATEGIES_ADDRESSES[0],
+                addresses.STRATEGIES_ADDRESSES[0],
             ).call()
         )
 
@@ -255,7 +255,7 @@ class TestWorkflow:
 
         final_shares = (
             aggregator.eth_client.delegation_manager.functions.operatorShares(
-                operator.operator_address, STRATEGIES_ADDRESSES[0]
+                operator.operator_address, addresses.STRATEGIES_ADDRESSES[0]
             ).call()
         )
         assert (
@@ -266,7 +266,7 @@ class TestWorkflow:
             aggregator.eth_client.service_manager.functions.getIntervalRewards(
                 init_environment["current_interval"],
                 operator.operator_address,
-                STRATEGIES_ADDRESSES[0],
+                addresses.STRATEGIES_ADDRESSES[0],
             ).call()
         )
         assert final_rewards == initial_rewards, "No new rewards for the operator"

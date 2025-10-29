@@ -14,16 +14,21 @@ cd ../
 
 forge script script/SertnDeployer.s.sol --rpc-url $RPC_HOST:$RPC_PORT --broadcast
 
-# Format the JSON file using Python
-if [ -f deployments/sertnDeployment.json ]; then
-    python3 -c "
+# Format sertnDeployment_*.json files
+shopt -s nullglob
+json_files=(deployments/sertnDeployment_*.json)
+
+if [ ${#json_files[@]} -eq 0 ]; then
+    echo "No sertnDeployment_*.json files found in contracts/deployments/"
+else
+    for json_file in "${json_files[@]}"; do
+        python3 -c "
 import json
-with open('deployments/sertnDeployment.json', 'r') as f:
+with open('$json_file', 'r') as f:
     data = json.load(f)
-with open('deployments/sertnDeployment.json', 'w') as f:
+with open('$json_file', 'w') as f:
     json.dump(data, f, indent=4)
 "
-    echo "Formatted contracts/deployments/sertnDeployment.json"
-else
-    echo "contracts/deployments/sertnDeployment.json not found!"
+        echo "Formatted contracts/$json_file"
+    done
 fi

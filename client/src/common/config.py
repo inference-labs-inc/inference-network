@@ -131,6 +131,11 @@ class BaseConfig(BaseModel):
         default=Environment.PRODUCTION,
         description="Environment setting for logging and behavior",
     )
+    chain_id: int = Field(
+        description="Ethereum chain ID to connect to",
+        default=31337,  # Hardhat local network
+        ge=1,
+    )
     eth_rpc_url: str = Field(description="Ethereum RPC URL")
     ecdsa_private_key_store_path: Path = Field(
         ..., description="Path to ECDSA private key file"

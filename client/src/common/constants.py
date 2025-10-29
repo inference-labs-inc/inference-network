@@ -22,22 +22,6 @@ MODELS_DATA_DIR.mkdir(parents=True, exist_ok=True)
 TEMP_FOLDER.mkdir(parents=True, exist_ok=True)
 PROOFS_FOLDER.mkdir(parents=True, exist_ok=True)
 
-# contracts addresses:
-with open(CONTRACTS_DIR / "deployments" / "sertnDeployment.json") as f:
-    deployment_info = json.load(f)
-    TASK_MANAGER_ADDRESS = deployment_info["sertnTaskManager"]
-    SERVICE_MANAGER_ADDRESS = deployment_info["sertnServiceManager"]
-    ALLOCATION_MANAGER_ADDRESS = deployment_info["allocationManager"]
-    STRATEGIES_ADDRESSES = [
-        deployment_info["strategy_0"],
-        deployment_info["strategy_1"],
-        deployment_info["strategy_2"],
-    ]
-    ETH_STRATEGY_ADDRESSES = [
-        deployment_info["eth_strategy_0"],
-        deployment_info["eth_strategy_1"],
-    ]
-
 IGNORED_MODEL_HASHES = []
 
 # Queue size limits

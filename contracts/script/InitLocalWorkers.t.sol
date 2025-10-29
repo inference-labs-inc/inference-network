@@ -4,6 +4,8 @@ pragma solidity ^0.8.19;
 import "forge-std/Script.sol";
 import "forge-std/console.sol";
 
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {IStrategy} from "@eigenlayer/contracts/interfaces/IStrategy.sol";
 import {IStrategyManager} from "@eigenlayer/contracts/interfaces/IStrategyManager.sol";
 import {IDelegationManager} from "@eigenlayer/contracts/interfaces/IDelegationManager.sol";
@@ -12,18 +14,17 @@ import {ISignatureUtilsMixinTypes} from "@eigenlayer/contracts/interfaces/ISigna
 import {IDelegationManagerTypes} from "@eigenlayer/contracts/interfaces/IDelegationManager.sol";
 import {IAllocationManager} from "@eigenlayer/contracts/interfaces/IAllocationManager.sol";
 import {IAllocationManagerTypes} from "@eigenlayer/contracts/interfaces/IAllocationManager.sol";
-import {IModelRegistry} from "../interfaces/IModelRegistry.sol";
 import {DelegationManager} from "@eigenlayer/contracts/core/DelegationManager.sol";
 import {RewardsCoordinator} from "@eigenlayer/contracts/core/RewardsCoordinator.sol";
 import {AllocationManager} from "@eigenlayer/contracts/core/AllocationManager.sol";
 import {OperatorSet} from "@eigenlayer/contracts/libraries/OperatorSetLib.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {console2 as console} from "forge-std/Test.sol";
 
 import {CoreDeploymentLib} from "./utils/CoreDeploymentLib.sol";
+import {ISertnTaskManager} from "../interfaces/ISertnTaskManager.sol";
+import {IModelRegistry} from "../interfaces/IModelRegistry.sol";
 import {SertnRegistrar} from "../src/SertnRegistrar.sol";
 import {SertnServiceManager} from "../src/SertnServiceManager.sol";
-import {ISertnTaskManager} from "../interfaces/ISertnTaskManager.sol";
 import {ERC20Mock} from "../test/mockContracts/ERC20Mock.sol";
 import {MockVerifier} from "../test/mockContracts/VerifierMock.sol";
 
@@ -100,7 +101,13 @@ contract InitLocalEnvScript is Script {
         coreDeployment = CoreDeploymentLib.readDeploymentJson("deployments/core/", block.chainid);
 
         // Read deployment addresses from JSON file
-        string memory deploymentFile = vm.readFile("./deployments/sertnDeployment.json");
+        string memory deploymentFile = vm.readFile(
+            string.concat(
+                "./deployments/sertnDeployment_",
+                Strings.toString(block.chainid),
+                ".json"
+            )
+        );
 
         address strategyAddress1 = vm.parseJsonAddress(deploymentFile, ".strategy_0");
         address strategyAddress2 = vm.parseJsonAddress(deploymentFile, ".strategy_1");
