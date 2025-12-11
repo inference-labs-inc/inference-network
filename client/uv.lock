@@ -1418,7 +1418,7 @@ wheels = [
 ]
 
 [[package]]
-name = "sertn-avs"
+name = "inference-avs"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

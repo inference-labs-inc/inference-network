@@ -3,15 +3,15 @@ pragma solidity ^0.8.29;
 
 import {Test, console2 as console} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
-import {SertnServiceManager} from "../src/SertnServiceManager.sol";
-import {ISertnServiceManager} from "../interfaces/ISertnServiceManager.sol";
-import {ISertnTaskManager} from "../interfaces/ISertnTaskManager.sol";
+import {InferenceServiceManager} from "../src/InferenceServiceManager.sol";
+import {IInferenceServiceManager} from "../interfaces/IInferenceServiceManager.sol";
+import {IInferenceTaskManager} from "../interfaces/IInferenceTaskManager.sol";
 import {IModelRegistry} from "../interfaces/IModelRegistry.sol";
 import {ModelRegistry} from "../src/ModelRegistry.sol";
 import {MockVerifier} from "./mockContracts/VerifierMock.sol";
 import {ERC20Mock} from "./mockContracts/ERC20Mock.sol";
 import {MockAllocationManager} from "./mockContracts/AllocationManagerMock.sol";
-import {MockSertnTaskManager} from "./mockContracts/SertnTaskManagerMock.sol";
+import {MockInferenceTaskManager} from "./mockContracts/InferenceTaskManagerMock.sol";
 import {IStrategy} from "@eigenlayer/contracts/interfaces/IStrategy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IRewardsCoordinator, IRewardsCoordinatorTypes} from "@eigenlayer/contracts/interfaces/IRewardsCoordinator.sol";
@@ -51,17 +51,17 @@ contract MockStrategy {
     }
 }
 
-contract MockSertnRegistrar {
+contract MockInferenceRegistrar {
     // Empty implementation for testing
 }
 
-contract SertnServiceManagerTest is Test {
-    SertnServiceManager serviceManager;
+contract InferenceServiceManagerTest is Test {
+    InferenceServiceManager serviceManager;
     MockAllocationManager mockAllocationManager;
     MockDelegationManager mockDelegationManager;
     MockRewardsCoordinator mockRewardsCoordinator;
-    MockSertnTaskManager mockTaskManager;
-    MockSertnRegistrar mockRegistrar;
+    MockInferenceTaskManager mockTaskManager;
+    MockInferenceRegistrar mockRegistrar;
     ModelRegistry modelRegistry;
     MockVerifier mockVerifier;
     ERC20Mock mockToken1;
@@ -85,8 +85,8 @@ contract SertnServiceManagerTest is Test {
         mockAllocationManager = new MockAllocationManager();
         mockDelegationManager = new MockDelegationManager();
         mockRewardsCoordinator = new MockRewardsCoordinator();
-        mockTaskManager = new MockSertnTaskManager();
-        mockRegistrar = new MockSertnRegistrar();
+        mockTaskManager = new MockInferenceTaskManager();
+        mockRegistrar = new MockInferenceRegistrar();
         // Deploy tokens and strategies
         mockToken1 = new ERC20Mock();
         mockToken2 = new ERC20Mock();
@@ -99,7 +99,7 @@ contract SertnServiceManagerTest is Test {
         modelRegistry.initialize();
         mockVerifier = new MockVerifier();
         // Deploy and initialize ServiceManager
-        serviceManager = new SertnServiceManager();
+        serviceManager = new InferenceServiceManager();
         serviceManager.initialize(
             address(mockRewardsCoordinator),
             address(mockDelegationManager),
@@ -111,7 +111,7 @@ contract SertnServiceManagerTest is Test {
         // Update references
         serviceManager.updateTaskManager(address(mockTaskManager));
         serviceManager.updateModelRegistry(address(modelRegistry));
-        console.log("References updated in SertnServiceManager");
+        console.log("References updated in InferenceServiceManager");
         vm.stopPrank();
     }
 
@@ -119,9 +119,9 @@ contract SertnServiceManagerTest is Test {
         assertEq(address(serviceManager.allocationManager()), address(mockAllocationManager));
         assertEq(address(serviceManager.delegationManager()), address(mockDelegationManager));
         assertEq(address(serviceManager.rewardsCoordinator()), address(mockRewardsCoordinator));
-        assertEq(address(serviceManager.sertnTaskManager()), address(mockTaskManager));
+        assertEq(address(serviceManager.inferenceTaskManager()), address(mockTaskManager));
         assertEq(address(serviceManager.modelRegistry()), address(modelRegistry));
-        assertEq(address(serviceManager.sertnRegistrar()), address(mockRegistrar));
+        assertEq(address(serviceManager.inferenceRegistrar()), address(mockRegistrar));
 
         // Check that owner is automatically added as aggregator
         assertTrue(serviceManager.isAggregator(owner));
@@ -133,11 +133,11 @@ contract SertnServiceManagerTest is Test {
         vm.prank(owner);
         serviceManager.updateTaskManager(newTaskManager);
 
-        assertEq(address(serviceManager.sertnTaskManager()), newTaskManager);
+        assertEq(address(serviceManager.inferenceTaskManager()), newTaskManager);
     }
 
     function test_updateTaskManager_revertZeroAddress() public {
-        vm.expectRevert(ISertnServiceManager.ZeroAddress.selector);
+        vm.expectRevert(IInferenceServiceManager.ZeroAddress.selector);
         vm.prank(owner);
         serviceManager.updateTaskManager(address(0));
     }
@@ -158,7 +158,7 @@ contract SertnServiceManagerTest is Test {
     }
 
     function test_updateModelRegistry_revertZeroAddress() public {
-        vm.expectRevert(ISertnServiceManager.ZeroAddress.selector);
+        vm.expectRevert(IInferenceServiceManager.ZeroAddress.selector);
         vm.prank(owner);
         serviceManager.updateModelRegistry(address(0));
     }
@@ -177,7 +177,7 @@ contract SertnServiceManagerTest is Test {
     }
 
     function test_addAggregator_revertZeroAddress() public {
-        vm.expectRevert(ISertnServiceManager.ZeroAddress.selector);
+        vm.expectRevert(IInferenceServiceManager.ZeroAddress.selector);
         vm.prank(owner);
         serviceManager.addAggregator(address(0));
     }
@@ -186,7 +186,7 @@ contract SertnServiceManagerTest is Test {
         vm.startPrank(owner);
         serviceManager.addAggregator(aggregator1);
 
-        vm.expectRevert(ISertnServiceManager.AggregatorAlreadyExists.selector);
+        vm.expectRevert(IInferenceServiceManager.AggregatorAlreadyExists.selector);
         serviceManager.addAggregator(aggregator1);
         vm.stopPrank();
     }
@@ -214,7 +214,7 @@ contract SertnServiceManagerTest is Test {
     }
 
     function test_removeAggregator_revertNotAggregator() public {
-        vm.expectRevert(ISertnServiceManager.NotAggregator.selector);
+        vm.expectRevert(IInferenceServiceManager.NotAggregator.selector);
         vm.prank(owner);
         serviceManager.removeAggregator(aggregator1);
     }
@@ -253,7 +253,7 @@ contract SertnServiceManagerTest is Test {
         // Set task manager as caller (mock)
         vm.mockCall(
             address(mockTaskManager),
-            abi.encodeWithSignature("sertnServiceManager()"),
+            abi.encodeWithSignature("inferenceServiceManager()"),
             abi.encode(address(serviceManager))
         );
 
@@ -267,7 +267,7 @@ contract SertnServiceManagerTest is Test {
     }
 
     function test_pullFeeFromUser_revertNotTaskManager() public {
-        vm.expectRevert(ISertnServiceManager.NotTaskManager.selector);
+        vm.expectRevert(IInferenceServiceManager.NotTaskManager.selector);
         vm.prank(aggregator1);
         serviceManager.pullFeeFromUser(user, IERC20(address(mockToken1)), 1000);
     }
@@ -287,7 +287,7 @@ contract SertnServiceManagerTest is Test {
         // Test: Complete task (called by task manager)
         vm.prank(address(mockTaskManager));
         vm.expectEmit(true, true, false, true);
-        emit ISertnServiceManager.TaskRewardAccumulated(operator, feeAmount, 0); // currentInterval is mocked as 0
+        emit IInferenceServiceManager.TaskRewardAccumulated(operator, feeAmount, 0); // currentInterval is mocked as 0
         serviceManager.taskCompleted(
             operator,
             feeAmount,
@@ -314,7 +314,7 @@ contract SertnServiceManagerTest is Test {
     }
 
     function test_taskCompleted_revertNotTaskManager() public {
-        vm.expectRevert(ISertnServiceManager.NotTaskManager.selector);
+        vm.expectRevert(IInferenceServiceManager.NotTaskManager.selector);
         vm.prank(aggregator1);
         serviceManager.taskCompleted(
             operator,
@@ -338,7 +338,7 @@ contract SertnServiceManagerTest is Test {
     }
 
     function test_slashOperator_revertNotTaskManager() public {
-        vm.expectRevert(ISertnServiceManager.NotTaskManager.selector);
+        vm.expectRevert(IInferenceServiceManager.NotTaskManager.selector);
         vm.prank(aggregator1);
         serviceManager.slashOperator(operator, 1000, 0, IStrategy(address(mockStrategy1)));
     }
@@ -378,7 +378,7 @@ contract SertnServiceManagerTest is Test {
         serviceManager.addAggregator(aggregator1);
 
         // Test onlyTaskManager modifier
-        vm.expectRevert(ISertnServiceManager.NotTaskManager.selector);
+        vm.expectRevert(IInferenceServiceManager.NotTaskManager.selector);
         vm.prank(nonOwner);
         serviceManager.pullFeeFromUser(user, IERC20(address(mockToken1)), 1000);
     }
@@ -396,7 +396,7 @@ contract SertnServiceManagerTest is Test {
         );
 
         // Verify model exists
-    assertEq(modelRegistry.modelName(modelId), "test_model");
+        assertEq(modelRegistry.modelName(modelId), "test_model");
         assertEq(address(serviceManager.modelRegistry()), address(modelRegistry));
 
         vm.stopPrank();
@@ -439,7 +439,7 @@ contract SertnServiceManagerTest is Test {
         // Verify final state
         assertEq(mockToken1.balanceOf(address(serviceManager)), feeAmount);
         assertTrue(serviceManager.isAggregator(aggregator1));
-    assertEq(modelRegistry.modelName(modelId), "workflow_model");
+        assertEq(modelRegistry.modelName(modelId), "workflow_model");
 
         uint32 currentInterval = serviceManager.getCurrentInterval();
 

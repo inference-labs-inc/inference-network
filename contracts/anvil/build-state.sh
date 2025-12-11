@@ -16,8 +16,8 @@ make build-contracts
 echo "Deploying EigenLayer contracts."
 make deploy-eigenlayer-contracts
 
-echo "Deploying Sertn contracts."
-make deploy-sertn-contracts
+echo "Deploying Inference contracts."
+make deploy-inference-contracts
 
 # Kill Anvil using the PID from the file
 if [ -f $PID_FILE ]; then

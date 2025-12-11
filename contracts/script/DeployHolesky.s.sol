@@ -3,9 +3,9 @@ pragma solidity ^0.8.29;
 
 import {Script} from "forge-std/Script.sol";
 import {console2} from "forge-std/console2.sol";
-import {SertnServiceManager} from "../src/SertnServiceManager.sol";
-import {SertnTaskManager} from "../src/SertnTaskManager.sol";
-import {SertnNodesManager} from "../src/SertnNodesManager.sol";
+import {InferenceServiceManager} from "../src/InferenceServiceManager.sol";
+import {InferenceTaskManager} from "../src/InferenceTaskManager.sol";
+import {InferenceNodesManager} from "../src/InferenceNodesManager.sol";
 import {ModelRegistry} from "../src/ModelRegistry.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
@@ -20,7 +20,7 @@ contract DeployHolesky is Script {
         address strategy = vm.envAddress("STRATEGY_ADDRESS");
         address rewardsCoordinator = vm.envAddress("REWARDS_COORDINATOR");
         address delegationManager = vm.envAddress("DELEGATION_MANAGER");
-        address sertnRegistrar = vm.envAddress("SERTN_REGISTRAR");
+        address inferenceRegistrar = vm.envAddress("INFERENCE_REGISTRAR");
         string memory avsMetadata = vm.envString("AVS_METADATA_URI");
 
         vm.startBroadcast(deployerKey);
@@ -29,9 +29,9 @@ contract DeployHolesky is Script {
         console2.log("Deployed ProxyAdmin at:", address(proxyAdmin));
 
         ModelRegistry modelRegistryImpl = new ModelRegistry();
-        SertnTaskManager taskManagerImpl = new SertnTaskManager();
-        SertnServiceManager serviceManagerImpl = new SertnServiceManager();
-        SertnNodesManager nodesManagerImpl = new SertnNodesManager();
+        InferenceTaskManager taskManagerImpl = new InferenceTaskManager();
+        InferenceServiceManager serviceManagerImpl = new InferenceServiceManager();
+        InferenceNodesManager nodesManagerImpl = new InferenceNodesManager();
 
         console2.log("Deployed implementations:");
         console2.log("- ModelRegistry:", address(modelRegistryImpl));
@@ -67,7 +67,7 @@ contract DeployHolesky is Script {
         strategiesForInit[0] = IStrategy(strategy);
 
         ModelRegistry(address(modelRegistryProxy)).initialize();
-        SertnTaskManager(address(taskManagerProxy)).initialize(
+        InferenceTaskManager(address(taskManagerProxy)).initialize(
             rewardsCoordinator,
             delegationManager,
             allocationManager,
@@ -75,19 +75,19 @@ contract DeployHolesky is Script {
             address(modelRegistryProxy),
             address(nodesManagerImpl)
         );
-        SertnServiceManager(address(serviceManagerProxy)).initialize(
+        InferenceServiceManager(address(serviceManagerProxy)).initialize(
             rewardsCoordinator,
             delegationManager,
             allocationManager,
-            sertnRegistrar,
+            inferenceRegistrar,
             strategiesForInit,
             avsMetadata
         );
 
-        SertnServiceManager(address(serviceManagerProxy)).updateTaskManager(
+        InferenceServiceManager(address(serviceManagerProxy)).updateTaskManager(
             address(taskManagerProxy)
         );
-        SertnServiceManager(address(serviceManagerProxy)).updateModelRegistry(
+        InferenceServiceManager(address(serviceManagerProxy)).updateModelRegistry(
             address(modelRegistryProxy)
         );
 

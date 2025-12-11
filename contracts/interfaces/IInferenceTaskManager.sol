@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.29;
 
-interface ISertnTaskManager {
+interface IInferenceTaskManager {
     /// @notice Thrown when the model id is invalid
     error InvalidModelId();
 

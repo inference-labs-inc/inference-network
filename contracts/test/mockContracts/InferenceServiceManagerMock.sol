@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.29;
 
-contract MockSertnServiceManager {
+contract MockInferenceServiceManager {
     mapping(address => bool) public aggregators;
 
     event FeesPulled(address user, address token, uint256 amount);

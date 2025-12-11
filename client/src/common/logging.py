@@ -3,7 +3,7 @@ import sys
 from typing import Optional
 
 # Configure logging
-logger = logging.getLogger("sertn")
+logger = logging.getLogger("inference")
 
 
 def setup_logging(verbose: bool = False, log_file: Optional[str] = None):
@@ -41,7 +41,7 @@ def setup_logging(verbose: bool = False, log_file: Optional[str] = None):
 def get_logger(name: Optional[str] = None) -> logging.Logger:
     """Get a logger instance."""
     if name:
-        return logging.getLogger(f"sertn.{name}")
+        return logging.getLogger(f"inference.{name}")
     return logger
 
 

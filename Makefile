@@ -32,8 +32,8 @@ ___CONTRACTS___: ##
 
 build-contracts: ## builds all contracts and generates ABIs
 	cd contracts && forge build
-	cd contracts && forge inspect SertnTaskManager abi --json > ../abis/SertnTaskManager.abi.json
-	cd contracts && forge inspect SertnServiceManager abi --json > ../abis/SertnServiceManager.abi.json
+	cd contracts && forge inspect InferenceTaskManager abi --json > ../abis/InferenceTaskManager.abi.json
+	cd contracts && forge inspect InferenceServiceManager abi --json > ../abis/InferenceServiceManager.abi.json
 	cd contracts && forge inspect StrategyBase abi --json > ../abis/StrategyBase.abi.json
 	cd contracts && forge inspect ERC20Mock abi --json > ../abis/ERC20Mock.abi.json
 	cd contracts && forge inspect ERC20 abi --json > ../abis/ERC20.abi.json
@@ -42,15 +42,15 @@ build-contracts: ## builds all contracts and generates ABIs
 	cd contracts && forge inspect AllocationManager abi --json > ../abis/AllocationManager.abi.json
 	cd contracts && forge inspect ModelRegistry abi --json > ../abis/ModelRegistry.abi.json
 	cd contracts && forge inspect RewardsCoordinator abi --json > ../abis/RewardsCoordinator.abi.json
-	cd contracts && forge inspect SertnNodesManager abi --json > ../abis/SertnNodesManager.abi.json
+	cd contracts && forge inspect InferenceNodesManager abi --json > ../abis/InferenceNodesManager.abi.json
 
 deploy-eigenlayer-contracts:
 	@chmod +x ./contracts/anvil/deploy-el.sh
 	./contracts/anvil/deploy-el.sh
 
-deploy-sertn-contracts:
-	@chmod +x ./contracts/anvil/deploy-sertn.sh
-	./contracts/anvil/deploy-sertn.sh
+deploy-inference-contracts:
+	@chmod +x ./contracts/anvil/deploy-inference.sh
+	./contracts/anvil/deploy-inference.sh
 
 init-local-workers:  # init operator and aggregator for local testing
 	@chmod +x ./contracts/anvil/init-local-workers.sh

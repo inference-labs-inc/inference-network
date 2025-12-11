@@ -1,4 +1,4 @@
-Python implementation of operator and aggregator services for the Eigenlayer SERTN protocol.
+Python implementation of operator and aggregator services for the Inference Network.
 
 # Developer Guide
 

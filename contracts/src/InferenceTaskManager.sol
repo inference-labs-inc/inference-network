@@ -11,16 +11,15 @@ import {IDelegationManager} from "@eigenlayer/contracts/interfaces/IDelegationMa
 import {IRewardsCoordinator} from "@eigenlayer/contracts/interfaces/IRewardsCoordinator.sol";
 import {IStrategy} from "@eigenlayer/contracts/interfaces/IStrategy.sol";
 import {OperatorSet} from "@eigenlayer/contracts/libraries/OperatorSetLib.sol";
-import {ISertnServiceManager} from "../interfaces/ISertnServiceManager.sol";
-import {ISertnTaskManager} from "../interfaces/ISertnTaskManager.sol";
-import {ISertnNodesManager} from "../interfaces/ISertnNodesManager.sol";
+import {IInferenceServiceManager} from "../interfaces/IInferenceServiceManager.sol";
+import {IInferenceTaskManager} from "../interfaces/IInferenceTaskManager.sol";
+import {IInferenceNodesManager} from "../interfaces/IInferenceNodesManager.sol";
 import {IVerifier} from "../interfaces/IVerifier.sol";
 import {IModelRegistry} from "../interfaces/IModelRegistry.sol";
 import {ModelRegistry} from "./ModelRegistry.sol";
-import {SertnNodesManager} from "./SertnNodesManager.sol";
+import {InferenceNodesManager} from "./InferenceNodesManager.sol";
 
-
-contract SertnTaskManager is OwnableUpgradeable, ISertnTaskManager {
+contract InferenceTaskManager is OwnableUpgradeable, IInferenceTaskManager {
     using EnumerableSet for EnumerableSet.UintSet;
     // queue of tasks that are waiting to be assigned to an operator
     address[] public operators;
@@ -38,12 +37,12 @@ contract SertnTaskManager is OwnableUpgradeable, ISertnTaskManager {
     IAllocationManager public allocationManager;
     IDelegationManager public delegationManager;
     IRewardsCoordinator public rewardsCoordinator;
-    ISertnNodesManager public sertnNodesManager;
-    ISertnServiceManager public sertnServiceManager;
+    IInferenceNodesManager public inferenceNodesManager;
+    IInferenceServiceManager public inferenceServiceManager;
     ModelRegistry public modelRegistry;
 
     modifier onlyAggregators() {
-        if (!sertnServiceManager.isAggregator(msg.sender)) {
+        if (!inferenceServiceManager.isAggregator(msg.sender)) {
             revert NotAggregator();
         }
         _;
@@ -53,17 +52,17 @@ contract SertnTaskManager is OwnableUpgradeable, ISertnTaskManager {
         address _rewardsCoordinator,
         address _delegationManager,
         address _allocationManager,
-        address _sertnServiceManager,
+        address _inferenceServiceManager,
         address _modelRegistry,
-        address _sertnNodesManager
+        address _inferenceNodesManager
     ) public initializer {
         __Ownable_init();
         allocationManager = IAllocationManager(_allocationManager);
         delegationManager = IDelegationManager(_delegationManager);
         rewardsCoordinator = IRewardsCoordinator(_rewardsCoordinator);
-        sertnServiceManager = ISertnServiceManager(_sertnServiceManager);
+        inferenceServiceManager = IInferenceServiceManager(_inferenceServiceManager);
         modelRegistry = ModelRegistry(_modelRegistry);
-        sertnNodesManager = ISertnNodesManager(_sertnNodesManager);
+        inferenceNodesManager = IInferenceNodesManager(_inferenceNodesManager);
         taskNonce = 1; // Start task nonce at 1 to avoid zero-indexing issues
     }
 
@@ -79,7 +78,7 @@ contract SertnTaskManager is OwnableUpgradeable, ISertnTaskManager {
             allocationManager.getAllocatedSets(task.operator)[0]
         )[0];
         IERC20 token = strategy.underlyingToken();
-        sertnServiceManager.pullFeeFromUser(task.user, token, task.fee);
+        inferenceServiceManager.pullFeeFromUser(task.user, token, task.fee);
 
         emit TaskCreated(task.nonce, task.user);
         tasks[task.nonce].state = TaskState.ASSIGNED;
@@ -136,7 +135,12 @@ contract SertnTaskManager is OwnableUpgradeable, ISertnTaskManager {
                 operatorSet
             )[0];
 
-            sertnServiceManager.slashOperator(task.operator, task.fee, operatorSet.id, strategy);
+            inferenceServiceManager.slashOperator(
+                task.operator,
+                task.fee,
+                operatorSet.id,
+                strategy
+            );
         }
         if (task.state != TaskState.COMPLETED) {
             revert TaskStateIncorrect(TaskState.COMPLETED);
@@ -160,7 +164,7 @@ contract SertnTaskManager is OwnableUpgradeable, ISertnTaskManager {
         ];
 
         if (success) {
-            sertnServiceManager.taskCompleted(
+            inferenceServiceManager.taskCompleted(
                 task.operator,
                 task.fee,
                 strategy,
@@ -169,7 +173,12 @@ contract SertnTaskManager is OwnableUpgradeable, ISertnTaskManager {
             tasks[taskId].state = TaskState.RESOLVED;
             emit TaskResolved(taskId, task.operator);
         } else {
-            sertnServiceManager.slashOperator(task.operator, task.fee, operatorSet.id, strategy);
+            inferenceServiceManager.slashOperator(
+                task.operator,
+                task.fee,
+                operatorSet.id,
+                strategy
+            );
             tasks[taskId].state = TaskState.REJECTED;
             emit TaskRejected(taskId, task.operator);
         }
@@ -250,14 +259,14 @@ contract SertnTaskManager is OwnableUpgradeable, ISertnTaskManager {
         uint256 requiredFucus = modelRegistry.requiredFUCUs(task.modelId);
 
         // Try to allocate FUCUs for this task
-        bool success = sertnNodesManager.allocateFucusForTask(
+        bool success = inferenceNodesManager.allocateFucusForTask(
             task.operator,
             task.modelId,
             requiredFucus
         );
 
         if (!success) {
-            revert ISertnTaskManager.InsufficientFucusCapacity(
+            revert IInferenceTaskManager.InsufficientFucusCapacity(
                 task.operator,
                 task.modelId,
                 requiredFucus
@@ -274,6 +283,6 @@ contract SertnTaskManager is OwnableUpgradeable, ISertnTaskManager {
         uint256 requiredFucus = modelRegistry.requiredFUCUs(task.modelId);
 
         // Release the allocated FUCUs
-        sertnNodesManager.releaseFucusForTask(task.operator, task.modelId, requiredFucus);
+        inferenceNodesManager.releaseFucusForTask(task.operator, task.modelId, requiredFucus);
     }
 }

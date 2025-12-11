@@ -21,15 +21,15 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {console2 as console} from "forge-std/Test.sol";
 
 import {CoreDeploymentLib} from "./utils/CoreDeploymentLib.sol";
-import {SertnRegistrar} from "../src/SertnRegistrar.sol";
-import {SertnServiceManager} from "../src/SertnServiceManager.sol";
-import {ISertnTaskManager} from "../interfaces/ISertnTaskManager.sol";
+import {InferenceRegistrar} from "../src/InferenceRegistrar.sol";
+import {InferenceServiceManager} from "../src/InferenceServiceManager.sol";
+import {IInferenceTaskManager} from "../interfaces/IInferenceTaskManager.sol";
 import {ERC20Mock} from "../test/mockContracts/ERC20Mock.sol";
 import {MockVerifier} from "../test/mockContracts/VerifierMock.sol";
 
 contract InitLocalEnvScript is Script {
     /*
-    This script initializes the local environment for Sertn by registering an operator and an aggregator
+    This script initializes the local environment for Inference by registering an operator and an aggregator
     Also a model is created in the model registry
     */
     using CoreDeploymentLib for *;
@@ -39,7 +39,7 @@ contract InitLocalEnvScript is Script {
     uint256 constant AMOUNT = 1 ether;
 
     // Contract instances
-    SertnServiceManager serviceManager;
+    InferenceServiceManager serviceManager;
     RewardsCoordinator rewardsCoordinator;
     IStrategyManager strategyManager;
     AllocationManager allocationManager;
@@ -100,7 +100,7 @@ contract InitLocalEnvScript is Script {
         coreDeployment = CoreDeploymentLib.readDeploymentJson("deployments/core/", block.chainid);
 
         // Read deployment addresses from JSON file
-        string memory deploymentFile = vm.readFile("./deployments/sertnDeployment.json");
+        string memory deploymentFile = vm.readFile("./deployments/inferenceDeployment.json");
 
         address strategyAddress1 = vm.parseJsonAddress(deploymentFile, ".strategy_0");
         address strategyAddress2 = vm.parseJsonAddress(deploymentFile, ".strategy_1");
@@ -108,9 +108,12 @@ contract InitLocalEnvScript is Script {
 
         // address strategyEth1Address = vm.parseJsonAddress(deploymentFile, ".eth_strategy_0");
         // address strategyEth2Address = vm.parseJsonAddress(deploymentFile, ".eth_strategy_1");
-        address serviceManagerAddress = vm.parseJsonAddress(deploymentFile, ".sertnServiceManager");
-        address taskManagerAddress = vm.parseJsonAddress(deploymentFile, ".sertnTaskManager");
-        // address sertnRegistrarAddress = vm.parseJsonAddress(deploymentFile, ".sertnRegistrar");
+        address serviceManagerAddress = vm.parseJsonAddress(
+            deploymentFile,
+            ".inferenceServiceManager"
+        );
+        address taskManagerAddress = vm.parseJsonAddress(deploymentFile, ".inferenceTaskManager");
+        // address inferenceRegistrarAddress = vm.parseJsonAddress(deploymentFile, ".inferenceRegistrar");
         address rewardsCoordinatorAddress = vm.parseJsonAddress(
             deploymentFile,
             ".rewardsCoordinator"
@@ -123,11 +126,11 @@ contract InitLocalEnvScript is Script {
         console.log("AllocationManager Address:", coreDeployment.allocationManager);
 
         // Get contract objects
-        serviceManager = SertnServiceManager(serviceManagerAddress);
-        // ISertnTaskManager taskManager = ISertnTaskManager(taskManagerAddress);
+        serviceManager = InferenceServiceManager(serviceManagerAddress);
+        // IInferenceTaskManager taskManager = IInferenceTaskManager(taskManagerAddress);
         rewardsCoordinator = RewardsCoordinator(rewardsCoordinatorAddress);
         strategyManager = rewardsCoordinator.strategyManager();
-        // SertnRegistrar sertnRegistrar = SertnRegistrar(sertnRegistrarAddress);
+        // InferenceRegistrar inferenceRegistrar = InferenceRegistrar(inferenceRegistrarAddress);
         allocationManager = AllocationManager(coreDeployment.allocationManager);
         delegationManager = rewardsCoordinator.delegationManager();
 

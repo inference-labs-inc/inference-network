@@ -24,7 +24,7 @@ logger = get_logger("operator")
 
 
 def run_operator(config: OperatorConfig) -> None:
-    logger.info("Starting Sertn Operator...")
+    logger.info("Starting Inference Operator...")
 
     with tqdm(total=100, desc="Initializing operator") as pbar:
         task_operator = TaskOperator(config)
@@ -97,7 +97,7 @@ class TaskOperator:
             )
             return
 
-        # get task details, `struct ISertnTaskManager.Task`
+        # get task details, `struct IInferenceTaskManager.Task`
         task = self.eth_client.task_manager.functions.tasks(task_id).call()
         model_id: int = task[TaskStructMap.MODEL_ID]  # uint256 modelId
         inputs: bytes = task[TaskStructMap.INPUTS]  # bytes inputs
@@ -122,7 +122,7 @@ class TaskOperator:
         )
 
     def process_challenged_task(self, task_id: int):
-        # get task details, `struct ISertnTaskManager.Task`
+        # get task details, `struct IInferenceTaskManager.Task`
         task = self.eth_client.task_manager.functions.tasks(task_id).call()
 
         starting_block: int = task[TaskStructMap.START_BLOCK]  # uint256 startBlock

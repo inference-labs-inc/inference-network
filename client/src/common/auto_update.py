@@ -9,7 +9,7 @@ from typing import Optional
 from common.logging import get_logger
 
 TARGET_BRANCH = "main"
-REPO_URL = "https://github.com/inference-labs-inc/sertn-avs"
+REPO_URL = "https://github.com/inference-labs-inc/inference-network"
 REQ_UPDATE_TIMEOUT = 60
 
 logger = get_logger("auto_update")

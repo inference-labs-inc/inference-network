@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.29;
 
-// Sertn
-import {ISertnServiceManager} from "../interfaces/ISertnServiceManager.sol";
-import {ISertnTaskManager} from "../interfaces/ISertnTaskManager.sol";
-import {ISertnRegistrar} from "../interfaces/ISertnRegistrar.sol";
+// Inference
+import {IInferenceServiceManager} from "../interfaces/IInferenceServiceManager.sol";
+import {IInferenceTaskManager} from "../interfaces/IInferenceTaskManager.sol";
+import {IInferenceRegistrar} from "../interfaces/IInferenceRegistrar.sol";
 import {IModelRegistry} from "../interfaces/IModelRegistry.sol";
 import {IVerifier} from "../interfaces/IVerifier.sol";
 // EigenLayer
@@ -22,12 +22,12 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin-upgradeable/contracts/se
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
- * @title Primary entrypoint for procuring services from Sertn.
+ * @title Primary entrypoint for procuring services from Inference.
  * @author Inference Labs, Inc.
  */
 
-contract SertnServiceManager is
-    ISertnServiceManager,
+contract InferenceServiceManager is
+    IInferenceServiceManager,
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable
 {
@@ -39,9 +39,9 @@ contract SertnServiceManager is
     IAllocationManager public allocationManager;
     IDelegationManager public delegationManager;
     IRewardsCoordinator public rewardsCoordinator;
-    ISertnTaskManager public sertnTaskManager;
+    IInferenceTaskManager public inferenceTaskManager;
     IModelRegistry public modelRegistry;
-    ISertnRegistrar public sertnRegistrar;
+    IInferenceRegistrar public inferenceRegistrar;
 
     // Operator info
     // mapping(address => bytes) public opInfo;
@@ -81,7 +81,7 @@ contract SertnServiceManager is
      * @notice Modifier to ensure the caller is the task manager
      */
     modifier onlyTaskManager() {
-        if (msg.sender != address(sertnTaskManager)) {
+        if (msg.sender != address(inferenceTaskManager)) {
             revert NotTaskManager();
         }
         _;
@@ -91,7 +91,7 @@ contract SertnServiceManager is
         address _rewardsCoordinator,
         address _delegationManager,
         address _allocationManager,
-        address _sertnRegistrar,
+        address _inferenceRegistrar,
         IStrategy[] memory _strategies,
         string memory _avsMetadata
     ) public initializer {
@@ -110,11 +110,11 @@ contract SertnServiceManager is
         allocationManager = IAllocationManager(_allocationManager);
         delegationManager = IDelegationManager(_delegationManager);
         rewardsCoordinator = IRewardsCoordinator(_rewardsCoordinator);
-        sertnRegistrar = ISertnRegistrar(_sertnRegistrar);
+        inferenceRegistrar = IInferenceRegistrar(_inferenceRegistrar);
         _registerToEigen(_strategies, _avsMetadata);
     }
 
-    /// @inheritdoc ISertnServiceManager
+    /// @inheritdoc IInferenceServiceManager
     function canSubmitRewardsForInterval(uint32 interval) external view returns (bool) {
         return
             interval < this.getCurrentInterval() &&
@@ -122,15 +122,15 @@ contract SertnServiceManager is
             operatorsInInterval[interval].length() > 0;
     }
 
-    /// @inheritdoc ISertnServiceManager
-    function updateTaskManager(address _sertnTaskManager) external onlyOwner {
-        if (_sertnTaskManager == address(0)) {
+    /// @inheritdoc IInferenceServiceManager
+    function updateTaskManager(address _inferenceTaskManager) external onlyOwner {
+        if (_inferenceTaskManager == address(0)) {
             revert ZeroAddress();
         }
-        sertnTaskManager = ISertnTaskManager(_sertnTaskManager);
+        inferenceTaskManager = IInferenceTaskManager(_inferenceTaskManager);
     }
 
-    /// @inheritdoc ISertnServiceManager
+    /// @inheritdoc IInferenceServiceManager
     function updateModelRegistry(address _modelRegistry) external onlyOwner {
         if (_modelRegistry == address(0)) {
             revert ZeroAddress();
@@ -154,10 +154,10 @@ contract SertnServiceManager is
             strategies: _strategies
         });
         allocationManager.createOperatorSets(address(this), params);
-        allocationManager.setAVSRegistrar(address(this), sertnRegistrar);
+        allocationManager.setAVSRegistrar(address(this), inferenceRegistrar);
     }
 
-    /// @inheritdoc ISertnServiceManager
+    /// @inheritdoc IInferenceServiceManager
     function addStrategies(
         IStrategy[] memory _strategies,
         uint32 operatorSetId
@@ -165,7 +165,7 @@ contract SertnServiceManager is
         allocationManager.addStrategiesToOperatorSet(address(this), operatorSetId, _strategies);
     }
 
-    /// @inheritdoc ISertnServiceManager
+    /// @inheritdoc IInferenceServiceManager
     function addAggregator(address _aggregator) external onlyOwner {
         if (_aggregator == address(0)) {
             revert ZeroAddress();
@@ -176,7 +176,7 @@ contract SertnServiceManager is
         aggregators.add(_aggregator);
     }
 
-    /// @inheritdoc ISertnServiceManager
+    /// @inheritdoc IInferenceServiceManager
     function removeAggregator(address _aggregator) external onlyOwner {
         if (!aggregators.contains(_aggregator)) {
             revert NotAggregator();
@@ -184,12 +184,12 @@ contract SertnServiceManager is
         aggregators.remove(_aggregator);
     }
 
-    /// @inheritdoc ISertnServiceManager
+    /// @inheritdoc IInferenceServiceManager
     function isAggregator(address _aggregator) external view returns (bool) {
         return aggregators.contains(_aggregator);
     }
 
-    /// @inheritdoc ISertnServiceManager
+    /// @inheritdoc IInferenceServiceManager
     function pullFeeFromUser(
         address _user,
         IERC20 _token,
@@ -198,7 +198,7 @@ contract SertnServiceManager is
         _token.transferFrom(_user, address(this), _fee);
     }
 
-    /// @inheritdoc ISertnServiceManager
+    /// @inheritdoc IInferenceServiceManager
     function slashOperator(
         address _operator,
         uint256 _fee,
@@ -221,7 +221,7 @@ contract SertnServiceManager is
         );
     }
 
-    /// @inheritdoc ISertnServiceManager
+    /// @inheritdoc IInferenceServiceManager
     function taskCompleted(
         address _operator,
         uint256 _fee,
@@ -250,7 +250,7 @@ contract SertnServiceManager is
         emit TaskRewardAccumulated(_operator, _fee, currentInterval);
     }
 
-    /// @inheritdoc ISertnServiceManager
+    /// @inheritdoc IInferenceServiceManager
     function submitRewardsForInterval(uint32 interval) external onlyOwner {
         require(!intervalSubmitted[interval], "Interval already submitted");
         require(interval <= this.getCurrentInterval(), "Interval not finished");
@@ -316,7 +316,9 @@ contract SertnServiceManager is
                 interval *
                 rewardsCoordinator.CALCULATION_INTERVAL_SECONDS(),
             duration: rewardsCoordinator.CALCULATION_INTERVAL_SECONDS(),
-            description: string(abi.encodePacked("Sertn AVS rewards for interval ", interval))
+            description: string(
+                abi.encodePacked("Inference Network rewards for interval ", interval)
+            )
         });
 
         // Submit to EigenLayer
@@ -334,7 +336,7 @@ contract SertnServiceManager is
     //     }
     // }
 
-    /// @inheritdoc ISertnServiceManager
+    /// @inheritdoc IInferenceServiceManager
     function getCurrentInterval() external view returns (uint32) {
         return
             uint32(
@@ -343,7 +345,7 @@ contract SertnServiceManager is
             );
     }
 
-    /// @inheritdoc ISertnServiceManager
+    /// @inheritdoc IInferenceServiceManager
     function getIntervalRewards(
         uint32 interval,
         address operator,
@@ -352,12 +354,12 @@ contract SertnServiceManager is
         return intervalRewards[interval][strategy][operator];
     }
 
-    /// @inheritdoc ISertnServiceManager
+    /// @inheritdoc IInferenceServiceManager
     function getOperatorsInInterval(uint32 interval) external view returns (address[] memory) {
         return operatorsInInterval[interval].values();
     }
 
-    /// @inheritdoc ISertnServiceManager
+    /// @inheritdoc IInferenceServiceManager
     function getStrategiesInInterval(uint32 interval) external view returns (address[] memory) {
         return strategiesInInterval[interval].values();
     }

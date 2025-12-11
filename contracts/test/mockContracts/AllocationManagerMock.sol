@@ -9,7 +9,7 @@ import {Test, console2 as console} from "forge-std/Test.sol";
 
 /**
  * @title MockAllocationManager
- * @notice Unified mock contract for testing both SertnServiceManager and SertnTaskManager
+ * @notice Unified mock contract for testing both InferenceServiceManager and InferenceTaskManager
  */
 contract MockAllocationManager {
     // AllocationManager... I hate you so God damn much!!!
@@ -17,13 +17,9 @@ contract MockAllocationManager {
     mapping(address => string) public avsMetadataURI;
     mapping(address => address) public avsRegistrar;
     mapping(address => OperatorSet[]) public allocatedSets;
-    mapping(address => mapping(uint32 => IStrategy[]))
-        public allocatedStrategies;
+    mapping(address => mapping(uint32 => IStrategy[])) public allocatedStrategies;
 
-    function updateAVSMetadataURI(
-        address avs,
-        string memory metadataURI
-    ) external {
+    function updateAVSMetadataURI(address avs, string memory metadataURI) external {
         avsMetadataURI[avs] = metadataURI;
     }
 
@@ -39,10 +35,7 @@ contract MockAllocationManager {
         avsRegistrar[avs] = registrar;
     }
 
-    function setAllocatedSets(
-        address operator,
-        OperatorSet[] memory sets
-    ) external {
+    function setAllocatedSets(address operator, OperatorSet[] memory sets) external {
         allocatedSets[operator] = sets;
     }
 
@@ -54,9 +47,7 @@ contract MockAllocationManager {
         allocatedStrategies[operator][operatorSet.id] = strategies;
     }
 
-    function getAllocatedSets(
-        address operator
-    ) external view returns (OperatorSet[] memory) {
+    function getAllocatedSets(address operator) external view returns (OperatorSet[] memory) {
         return allocatedSets[operator];
     }
 

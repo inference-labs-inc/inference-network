@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.12;
 
-import {SertnServiceManager} from "../src/SertnServiceManager.sol";
-import {SertnTaskManager} from "../src/SertnTaskManager.sol";
-import {SertnNodesManager} from "../src/SertnNodesManager.sol";
-import "../interfaces/ISertnServiceManager.sol";
-import "../interfaces/ISertnTaskManager.sol";
+import {InferenceServiceManager} from "../src/InferenceServiceManager.sol";
+import {InferenceTaskManager} from "../src/InferenceTaskManager.sol";
+import {InferenceNodesManager} from "../src/InferenceNodesManager.sol";
+import "../interfaces/IInferenceServiceManager.sol";
+import "../interfaces/IInferenceTaskManager.sol";
 import "../interfaces/IModelRegistry.sol";
 import {Vm} from "forge-std/Vm.sol";
 
@@ -55,7 +55,7 @@ contract AVSSetup2 is Test {
     OperatorSet internal opSet; // address avs; uint32 id;
     uint32[] opSetIds;
 
-    // SertnDeploymentLib.DeploymentData internal sertnDeployment;
+    // InferenceDeploymentLib.DeploymentData internal inferenceDeployment;
     CoreDeploymentLib.DeploymentData internal coreDeployment;
     CoreDeploymentLib.DeploymentConfigData coreConfigData;
 
@@ -68,9 +68,9 @@ contract AVSSetup2 is Test {
     ERC20Mock public ethToken2;
     ERC20Mock public serToken;
 
-    SertnServiceManager sertnServiceManager;
-    SertnTaskManager sertnTaskManager;
-    SertnNodesManager sertnNodesManager;
+    InferenceServiceManager inferenceServiceManager;
+    InferenceTaskManager inferenceTaskManager;
+    InferenceNodesManager inferenceNodesManager;
     MockVerifier mockVerifier;
     ModelRegistry modelRegistry;
 
@@ -94,23 +94,23 @@ contract AVSSetup2 is Test {
         initStrategiest();
 
         vm.startPrank(owner.key.addr);
-        console.log("Deploying AVS as sertnRegistrar");
-        MockAVSRegistrar sertnRegistrar = new MockAVSRegistrar();
+        console.log("Deploying AVS as inferenceRegistrar");
+        MockAVSRegistrar inferenceRegistrar = new MockAVSRegistrar();
 
-        sertnNodesManager = new SertnNodesManager();
+        inferenceNodesManager = new InferenceNodesManager();
 
-        console.log("Deployed AVS as sertnRegistrar");
-        sertnServiceManager = new SertnServiceManager();
-        sertnServiceManager.initialize(
+        console.log("Deployed AVS as inferenceRegistrar");
+        inferenceServiceManager = new InferenceServiceManager();
+        inferenceServiceManager.initialize(
             coreDeployment.rewardsCoordinator,
             coreDeployment.delegationManager,
             coreDeployment.allocationManager,
-            address(sertnRegistrar),
+            address(inferenceRegistrar),
             strategies,
             ""
         );
 
-        // // sertnRegistrar.initialize(address(sertnServiceManager));
+        // // inferenceRegistrar.initialize(address(inferenceServiceManager));
         mockVerifier = new MockVerifier();
         modelRegistry = new ModelRegistry();
         modelRegistry.initialize();
@@ -122,22 +122,22 @@ contract AVSSetup2 is Test {
             10
         );
 
-        sertnTaskManager = new SertnTaskManager();
-        sertnTaskManager.initialize(
+        inferenceTaskManager = new InferenceTaskManager();
+        inferenceTaskManager.initialize(
             coreDeployment.rewardsCoordinator,
             coreDeployment.delegationManager,
             coreDeployment.allocationManager,
-            address(sertnServiceManager),
+            address(inferenceServiceManager),
             address(modelRegistry),
-            address(sertnNodesManager)
+            address(inferenceNodesManager)
         );
-        // // console.log(sertnServiceManager.owner(), owner.key.addr);
-        sertnServiceManager.updateTaskManager(address(sertnTaskManager));
-        // sertnServiceManager.updateModelRegistry(address(modelRegistry));
+        // // console.log(inferenceServiceManager.owner(), owner.key.addr);
+        inferenceServiceManager.updateTaskManager(address(inferenceTaskManager));
+        // inferenceServiceManager.updateModelRegistry(address(modelRegistry));
 
-        sertnNodesManager.initialize(
+        inferenceNodesManager.initialize(
             address(coreDeployment.delegationManager),
-            address(sertnTaskManager),
+            address(inferenceTaskManager),
             address(modelRegistry)
         );
 
@@ -183,9 +183,9 @@ contract AVSSetup2 is Test {
         vm.label(coreDeployment.pauserRegistry, "PauserRegistry");
         vm.label(coreDeployment.strategyFactory, "StrategyFactory");
         vm.label(coreDeployment.strategyBeacon, "StrategyBeacon");
-        vm.label(address(sertnServiceManager), "SertnServiceManager");
-        vm.label(address(sertnTaskManager), "SertnTaskManager");
-        // vm.label(sertnDeployment.stakeRegistry, "StakeRegistry");
+        vm.label(address(inferenceServiceManager), "InferenceServiceManager");
+        vm.label(address(inferenceTaskManager), "InferenceTaskManager");
+        // vm.label(inferenceDeployment.stakeRegistry, "StakeRegistry");
     }
 
     function mintMockTokens(Operator memory operator, uint256 amount) internal {
@@ -243,7 +243,7 @@ contract AVSSetup2 is Test {
         );
         IAllocationManagerTypes.RegisterParams memory registerParams = IAllocationManagerTypes
             .RegisterParams({
-                avs: address(sertnServiceManager),
+                avs: address(inferenceServiceManager),
                 operatorSetIds: opSetIds, // [0]
                 data: _data
             });
@@ -268,8 +268,8 @@ contract AVSSetup2 is Test {
 
     function registerOperatorNodes(Operator memory operator) internal {
         vm.startPrank(operator.key.addr);
-        uint256 node_id = sertnNodesManager.registerNode("node1", "", 1000000);
-        sertnNodesManager.addModelSupport(node_id, modelId, 1000000);
+        uint256 node_id = inferenceNodesManager.registerNode("node1", "", 1000000);
+        inferenceNodesManager.addModelSupport(node_id, modelId, 1000000);
         vm.stopPrank();
     }
 }
@@ -294,7 +294,7 @@ contract RegisterOperatorToAVS2 is AVSSetup2 {
         allocationManager = AllocationManager(coreDeployment.allocationManager);
         permissionController = IPermissionController(coreDeployment.permissionController);
 
-        opSet = OperatorSet({avs: address(sertnServiceManager), id: 0});
+        opSet = OperatorSet({avs: address(inferenceServiceManager), id: 0});
         opSetIds.push(0);
 
         while (operators.length < OPERATOR_COUNT) {
@@ -354,7 +354,7 @@ contract RegisterOperatorToAVS2 is AVSSetup2 {
         vm.roll(1e9);
         vm.warp(86400 * 3);
         user = User({key: vm.createWallet("user_wallet")});
-        ISertnTaskManager.Task memory task = ISertnTaskManager.Task({
+        IInferenceTaskManager.Task memory task = IInferenceTaskManager.Task({
             startBlock: 0,
             startTimestamp: uint32(block.timestamp),
             modelId: 999, // Wrong model ID
@@ -363,7 +363,7 @@ contract RegisterOperatorToAVS2 is AVSSetup2 {
             user: user.key.addr,
             nonce: 1,
             operator: operators[0].key.addr,
-            state: ISertnTaskManager.TaskState.CREATED,
+            state: IInferenceTaskManager.TaskState.CREATED,
             output: bytes(""),
             fee: 1e2
         });
@@ -373,8 +373,8 @@ contract RegisterOperatorToAVS2 is AVSSetup2 {
         console.log("Sending task");
 
         vm.startPrank(user.key.addr);
-        vm.expectRevert(ISertnTaskManager.InvalidModelId.selector);
-        sertnTaskManager.sendTask(task);
+        vm.expectRevert(IInferenceTaskManager.InvalidModelId.selector);
+        inferenceTaskManager.sendTask(task);
         vm.stopPrank();
     }
 
@@ -382,7 +382,7 @@ contract RegisterOperatorToAVS2 is AVSSetup2 {
         vm.roll(1e9);
         vm.warp(86400 * 3);
         user = User({key: vm.createWallet("user_wallet")});
-        ISertnTaskManager.Task memory task = ISertnTaskManager.Task({
+        IInferenceTaskManager.Task memory task = IInferenceTaskManager.Task({
             startBlock: 0,
             startTimestamp: uint32(block.timestamp),
             modelId: modelId,
@@ -391,7 +391,7 @@ contract RegisterOperatorToAVS2 is AVSSetup2 {
             user: user.key.addr,
             nonce: 1,
             operator: operators[0].key.addr,
-            state: ISertnTaskManager.TaskState.CREATED,
+            state: IInferenceTaskManager.TaskState.CREATED,
             output: bytes(""),
             fee: 1e2
         });
@@ -402,13 +402,13 @@ contract RegisterOperatorToAVS2 is AVSSetup2 {
         vm.startPrank(user.key.addr);
 
         vm.expectEmit(true, true, false, true);
-        emit ISertnTaskManager.TaskCreated(1, task.user);
+        emit IInferenceTaskManager.TaskCreated(1, task.user);
 
         vm.expectEmit(true, true, false, true);
-        emit ISertnTaskManager.TaskAssigned(1, task.operator);
+        emit IInferenceTaskManager.TaskAssigned(1, task.operator);
 
-        sertnTaskManager.sendTask(task);
-        uint256 taskNonce = sertnTaskManager.taskNonce() - 1;
+        inferenceTaskManager.sendTask(task);
+        uint256 taskNonce = inferenceTaskManager.taskNonce() - 1;
         console.log("Task sent with nonce: %s", taskNonce);
         vm.stopPrank();
 
@@ -430,7 +430,7 @@ contract RegisterOperatorToAVS2 is AVSSetup2 {
     // function test_base() public {
     //     vm.roll(1e9);
     //     user = User({key: vm.createWallet("user_wallet")});
-    //     ISertnTaskManager.Task memory task = ISertnTaskManager.Task({
+    //     IInferenceTaskManager.Task memory task = IInferenceTaskManager.Task({
     //         startBlock: 0,
     //         modelId: 0,
     //         inputs: bytes(""),
@@ -438,7 +438,7 @@ contract RegisterOperatorToAVS2 is AVSSetup2 {
     //         user: user.key.addr,
     //         nonce: 0,
     //         operator: address(0),
-    //         state: ISertnTaskManager.TaskState.CREATED,
+    //         state: IInferenceTaskManager.TaskState.CREATED,
     //         output: bytes(""),
     //         fee: 1e2
     //     });
@@ -480,16 +480,16 @@ contract RegisterOperatorToAVS2 is AVSSetup2 {
 
     //     address[] memory _operators = new address[](1);
     //     _operators[0] = operators[0].key.addr;
-    //     _model[0] = ISertnServiceManager.Model({
+    //     _model[0] = IInferenceServiceManager.Model({
     //         title_: "WassupModel",
     //         description_: "Returns wassup",
     //         modelVerifier_: address(mockVerifier2),
     //         operators_: _operators
     //     });
 
-    //     ISertnServiceManager.OperatorModel[]
-    //         memory _operatorModel = new ISertnServiceManager.OperatorModel[](1);
-    //     _operatorModel[0] = ISertnServiceManager.OperatorModel({
+    //     IInferenceServiceManager.OperatorModel[]
+    //         memory _operatorModel = new IInferenceServiceManager.OperatorModel[](1);
+    //     _operatorModel[0] = IInferenceServiceManager.OperatorModel({
     //         operator_: operators[0].key.addr,
     //         modelId_: 2 ** 96 - 1,
     //         maxBlocks_: 1e2,
@@ -512,7 +512,7 @@ contract RegisterOperatorToAVS2 is AVSSetup2 {
     //     _addCompute(operators[0].key.addr, _computeUnitNames, _computeUnits);
 
     //     user = User({key: vm.createWallet("user_wallet")});
-    //     ISertnServiceManager.Task memory task = ISertnServiceManager.Task({
+    //     IInferenceServiceManager.Task memory task = IInferenceServiceManager.Task({
     //         operatorModelId_: 4,
     //         inputs_: bytes(""),
     //         poc_: 1e2,
@@ -536,7 +536,7 @@ contract RegisterOperatorToAVS2 is AVSSetup2 {
     function _prepare_aggregator(address _user) internal {
         // make user an aggregator
         vm.startPrank(owner.key.addr);
-        sertnServiceManager.addAggregator(_user);
+        inferenceServiceManager.addAggregator(_user);
         vm.stopPrank();
 
         vm.startPrank(_user);
@@ -547,14 +547,14 @@ contract RegisterOperatorToAVS2 is AVSSetup2 {
         serToken.mint(_user, 1 ether);
 
         console.log("Approving tokens");
-        ethToken1.approve(address(sertnServiceManager), 1e4);
-        ethToken2.approve(address(sertnServiceManager), 1e4);
-        serToken.approve(address(sertnServiceManager), 1e4);
+        ethToken1.approve(address(inferenceServiceManager), 1e4);
+        ethToken2.approve(address(inferenceServiceManager), 1e4);
+        serToken.approve(address(inferenceServiceManager), 1e4);
 
         console.log("Approving for task manager");
-        ethToken1.approve(address(sertnTaskManager), 1e4);
-        ethToken2.approve(address(sertnTaskManager), 1e4);
-        serToken.approve(address(sertnTaskManager), 1e4);
+        ethToken1.approve(address(inferenceTaskManager), 1e4);
+        ethToken2.approve(address(inferenceTaskManager), 1e4);
+        serToken.approve(address(inferenceTaskManager), 1e4);
 
         vm.stopPrank();
     }
@@ -562,29 +562,30 @@ contract RegisterOperatorToAVS2 is AVSSetup2 {
     function _respondToTask(address operator, uint256 _taskId) internal {
         vm.startPrank(operator);
         console.log("Responding to task with id: %s", _taskId);
-        sertnTaskManager.submitTaskOutput(_taskId, bytes("dummy output"));
+        inferenceTaskManager.submitTaskOutput(_taskId, bytes("dummy output"));
 
         console.log("Task response submitted");
 
-        // ISertnServiceManager.Operator memory _operator = abi.decode(
-        //     sertnServiceManager.opInfo(operator),
-        //     (ISertnServiceManager.Operator)
+        // IInferenceServiceManager.Operator memory _operator = abi.decode(
+        //     inferenceServiceManager.opInfo(operator),
+        //     (IInferenceServiceManager.Operator)
         // );
         console.log(
             "Task state: %s",
-            sertnTaskManager.getTask(_taskId).state == ISertnTaskManager.TaskState.COMPLETED
+            inferenceTaskManager.getTask(_taskId).state == IInferenceTaskManager.TaskState.COMPLETED
         );
         require(
-            sertnTaskManager.getTask(_taskId).state == ISertnTaskManager.TaskState.COMPLETED,
+            inferenceTaskManager.getTask(_taskId).state ==
+                IInferenceTaskManager.TaskState.COMPLETED,
             "Not completed task"
         );
-        // ISertnServiceManager.TaskResponse
-        //     memory _taskResponse = ISertnServiceManager.TaskResponse({
+        // IInferenceServiceManager.TaskResponse
+        //     memory _taskResponse = IInferenceServiceManager.TaskResponse({
         //         taskId_: _taskId,
         //         output_: bytes("hello world"),
         //         proven_: _alreadyVerified
         //     });
-        // sertnTaskManager.submitTaskOutput(_taskResponse, _verification, _proof);
+        // inferenceTaskManager.submitTaskOutput(_taskResponse, _verification, _proof);
         vm.stopPrank();
     }
 
@@ -596,18 +597,18 @@ contract RegisterOperatorToAVS2 is AVSSetup2 {
         bool _alreadyVerified
     ) internal {
         vm.startPrank(operator);
-        // ISertnServiceManager.Operator memory _operator = abi.decode(
-        //     sertnServiceManager.opInfo(operator),
-        //     (ISertnServiceManager.Operator)
+        // IInferenceServiceManager.Operator memory _operator = abi.decode(
+        //     inferenceServiceManager.opInfo(operator),
+        //     (IInferenceServiceManager.Operator)
         // );
         // require(_inBytesArray(_operator.openTasks_, _taskId), "Not open task");
-        // ISertnServiceManager.TaskResponse
-        //     memory _taskResponse = ISertnServiceManager.TaskResponse({
+        // IInferenceServiceManager.TaskResponse
+        //     memory _taskResponse = IInferenceServiceManager.TaskResponse({
         //         taskId_: _taskId,
         //         output_: bytes("wassup"),
         //         proven_: _alreadyVerified
         //     });
-        // sertnTaskManager.submitTask(_taskResponse, _verification, _proof);
+        // inferenceTaskManager.submitTask(_taskResponse, _verification, _proof);
         vm.stopPrank();
     }
 
@@ -616,7 +617,7 @@ contract RegisterOperatorToAVS2 is AVSSetup2 {
         uint256 _taskId
     ) internal returns (string memory _outputData) {
         vm.startPrank(_user);
-        ISertnTaskManager.Task memory _task = sertnTaskManager.getTask(_taskId);
+        IInferenceTaskManager.Task memory _task = inferenceTaskManager.getTask(_taskId);
 
         _outputData = string(_task.output);
         console.log("Task output: %s", _outputData);
@@ -638,7 +639,7 @@ contract RegisterOperatorToAVS2 is AVSSetup2 {
             )[0][0],
             "min slashable"
         );
-        // sertnServiceManager.slashOperator(_taskId, "test");
+        // inferenceServiceManager.slashOperator(_taskId, "test");
         console.log(
             allocationManager.getMinimumSlashableStake(
                 opSet,
@@ -657,7 +658,7 @@ contract RegisterOperatorToAVS2 is AVSSetup2 {
     //     string memory _modelName,
     //     uint256 _computeCost
     // ) internal {
-    //     sertnServiceManager.addModels(_operatorModels);
+    //     inferenceServiceManager.addModels(_operatorModels);
     // }
 
     function _addCompute(
@@ -666,20 +667,20 @@ contract RegisterOperatorToAVS2 is AVSSetup2 {
         uint256[] memory _computeUnits
     ) internal {
         vm.startPrank(_operator);
-        // sertnServiceManager.modifyCompute(_computeUnitNames, _computeUnits);
+        // inferenceServiceManager.modifyCompute(_computeUnitNames, _computeUnits);
         vm.stopPrank();
     }
 
     function _clearTask(bytes memory _taskId) internal {
         vm.startPrank(owner.key.addr);
-        // sertnTaskManager.clearTask(_taskId, false);
+        // inferenceTaskManager.clearTask(_taskId, false);
         vm.stopPrank();
     }
 
     function _getLatestTaskId(address operator) internal pure returns (bytes memory) {
-        // ISertnServiceManager.Operator memory _operator = abi.decode(
-        //     sertnServiceManager.opInfo(operator),
-        //     (ISertnServiceManager.Operator)
+        // IInferenceServiceManager.Operator memory _operator = abi.decode(
+        //     inferenceServiceManager.opInfo(operator),
+        //     (IInferenceServiceManager.Operator)
         // );
         // require(_operator.openTasks_.length > 0, "No open tasks");
         // return (_operator.openTasks_[_operator.openTasks_.length - 1]);

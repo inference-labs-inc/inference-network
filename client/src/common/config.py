@@ -1,5 +1,5 @@
 """
-Configuration models and validation for Sertn AVS.
+Configuration models and validation for Inference Network.
 
 This module provides Pydantic models for validating YAML configuration files
 used by both operators and aggregators.
@@ -105,7 +105,7 @@ class BaseConfig(BaseModel):
 
 
 class OperatorConfig(BaseConfig):
-    """Configuration for Sertn AVS Operator."""
+    """Configuration for Inference Network Operator."""
 
     aggregator_server_ip_port_address: str = Field(
         description="Address where aggregator server listens",
@@ -130,7 +130,7 @@ class OperatorConfig(BaseConfig):
 
 
 class AggregatorConfig(BaseConfig):
-    """Configuration for Sertn AVS Aggregator."""
+    """Configuration for Inference Network Aggregator."""
 
     eth_ws_url: str = Field(
         default="ws://localhost:8545",

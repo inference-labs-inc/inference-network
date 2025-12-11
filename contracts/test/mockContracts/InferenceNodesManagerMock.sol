@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.29;
 
-import {ISertnNodesManager} from "../../interfaces/ISertnNodesManager.sol";
+import {IInferenceNodesManager} from "../../interfaces/IInferenceNodesManager.sol";
 
 /**
- * @title SertnNodesManagerMock
- * @notice Basic mock implementation of SertnNodesManager for testing purposes
+ * @title InferenceNodesManagerMock
+ * @notice Basic mock implementation of InferenceNodesManager for testing purposes
  * @dev Always returns success/positive responses - assumes infinite FUCUS and all models supported
  */
-contract SertnNodesManagerMock is ISertnNodesManager {
+contract InferenceNodesManagerMock is IInferenceNodesManager {
     uint256 public override nextNodeId = 1;
     mapping(uint256 => mapping(uint256 => NodeModelConfig)) public override nodeModelConfigs;
     mapping(address => mapping(uint256 => uint256)) public override operatorAllocatedFucus;

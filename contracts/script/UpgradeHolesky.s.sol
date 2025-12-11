@@ -10,8 +10,8 @@ import {ITransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transp
 import {stdJson} from "forge-std/StdJson.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
-import {SertnServiceManager} from "../src/SertnServiceManager.sol";
-import {SertnTaskManager} from "../src/SertnTaskManager.sol";
+import {InferenceServiceManager} from "../src/InferenceServiceManager.sol";
+import {InferenceTaskManager} from "../src/InferenceTaskManager.sol";
 import {ModelRegistry} from "../src/ModelRegistry.sol";
 
 contract UpgradeHolesky is Script {
@@ -45,17 +45,13 @@ contract UpgradeHolesky is Script {
         console2.log("Proxy admin from env:", proxyAdmin);
     }
 
-    function readDeploymentJson()
-        internal
-        view
-        returns (DeploymentData memory)
-    {
+    function readDeploymentJson() internal view returns (DeploymentData memory) {
         string memory filePath = string.concat(
-            "deployments/sertn/",
+            "deployments/inference/",
             vm.toString(block.chainid),
             ".json"
         );
-        console2.log("Reading Sertn deployment from:", filePath);
+        console2.log("Reading Inference deployment from:", filePath);
 
         require(vm.exists(filePath), "Deployment file does not exist");
         console2.log("File exists, reading contents...");
@@ -83,23 +79,14 @@ contract UpgradeHolesky is Script {
         DeploymentData memory deployment = readDeploymentJson();
 
         console2.log("Deploying new implementations...");
-        SertnServiceManager newServiceManagerImpl = new SertnServiceManager();
-        console2.log(
-            "New service manager implementation:",
-            address(newServiceManagerImpl)
-        );
+        InferenceServiceManager newServiceManagerImpl = new InferenceServiceManager();
+        console2.log("New service manager implementation:", address(newServiceManagerImpl));
 
-        SertnTaskManager newTaskManagerImpl = new SertnTaskManager();
-        console2.log(
-            "New task manager implementation:",
-            address(newTaskManagerImpl)
-        );
+        InferenceTaskManager newTaskManagerImpl = new InferenceTaskManager();
+        console2.log("New task manager implementation:", address(newTaskManagerImpl));
 
         ModelRegistry newModelRegistryImpl = new ModelRegistry();
-        console2.log(
-            "New model registry implementation:",
-            address(newModelRegistryImpl)
-        );
+        console2.log("New model registry implementation:", address(newModelRegistryImpl));
 
         console2.log("Upgrading service manager...");
         ProxyAdmin(proxyAdmin).upgrade(
@@ -127,7 +114,7 @@ contract UpgradeHolesky is Script {
         vm.stopBroadcast();
 
         string memory deploymentPath = string.concat(
-            "deployments/sertn/",
+            "deployments/inference/",
             vm.toString(block.chainid),
             ".json"
         );

@@ -310,6 +310,19 @@
   },
   {
     "type": "function",
+    "name": "inferenceTaskManager",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IInferenceTaskManager"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "initialize",
     "inputs": [
       {
@@ -574,19 +587,6 @@
     "inputs": [],
     "outputs": [],
     "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "inferenceTaskManager",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "contract IInferenceTaskManager"
-      }
-    ],
-    "stateMutability": "view"
   },
   {
     "type": "function",
