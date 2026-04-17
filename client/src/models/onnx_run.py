@@ -5,13 +5,14 @@ from common.constants import MODELS_FOLDER
 
 
 def run_onnx(model_id: str, input_data: list[float]) -> list[float]:
-    """
-    Run an ONNX model with the given input data.
+    """Run an ONNX model with the given input data.
+
     Args:
-        model_path (str): Path to the ONNX model file.
-        input_data (list[float]): Input data for the model.
+        model_id: Model identifier used to locate the ONNX file in models folder.
+        input_data: Input data for the model as a list of floats.
+
     Returns:
-        np.ndarray: The output of the model as a NumPy array.
+        Model output as a flattened list of floats.
     """
     # Path to the ONNX model
     model_path = MODELS_FOLDER / model_id / "network.onnx"

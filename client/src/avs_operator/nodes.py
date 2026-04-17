@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-from typing import List, Optional
 
 from common.config import ModelConfig, NodeConfig
 from common.logging import get_logger
@@ -23,9 +22,10 @@ class OperatorNodesManager:
         self.registered_models = self.get_registered_models()
 
     def get_registered_models(self) -> dict[str, int]:
-        """
-        Get all registered models in `ModelRegistry` contract.
-        :return: Dictionary with model URIs as keys and their IDs as values.
+        """Get all registered models in ModelRegistry contract.
+
+        Returns:
+            Dictionary with model names as keys and their IDs as values.
         """
         models: dict[str, int] = {}
 
@@ -46,7 +46,12 @@ class OperatorNodesManager:
                 )
         return models
 
-    def sync_nodes(self):
+    def sync_nodes(self) -> None:
+        """Synchronize node state between local config and blockchain.
+
+        Iterates through registered nodes on blockchain and syncs their state
+        with local configuration. Registers any new nodes from config.
+        """
         # get all nodes ids registered by the operator from the blockchain
         registered_node_ids: list[int] = (
             self.eth_client.nodes_manager.functions.getOperatorNodes(
@@ -82,10 +87,14 @@ class OperatorNodesManager:
                         f"Node with ID {node_id} is registered, and has synced state from the blockchain.",
                     )
 
-    def sync_node_state(self, node_id: int) -> Optional[str]:
-        """
-        Sync the state of a node in the blockchain.
-        :param node_id: The ID of the node to sync.
+    def sync_node_state(self, node_id: int) -> str | None:
+        """Sync the state of a node in the blockchain.
+
+        Args:
+            node_id: The ID of the node to sync.
+
+        Returns:
+            The node name if synced successfully, None if node was deregistered.
         """
         # get node details from the blockchain
         (
@@ -141,11 +150,12 @@ class OperatorNodesManager:
 
         return node_name
 
-    def update_node_models(self, node_id: int, models: List[ModelConfig]):
-        """
-        Update the supported models for a node in the blockchain.
-        :param node_id: The ID of the node to update.
-        :param models: List of ModelConfig objects to support.
+    def update_node_models(self, node_id: int, models: list[ModelConfig]) -> None:
+        """Update the supported models for a node in the blockchain.
+
+        Args:
+            node_id: The ID of the node to update.
+            models: List of ModelConfig objects to support.
         """
         supported_models: list[int] = (  # model_allocated_fucus
             self.eth_client.nodes_manager.functions.getNodeSupportedModels(
@@ -201,12 +211,13 @@ class OperatorNodesManager:
                     f"Removed model {model_id} from node {node_id}",
                 )
 
-    def register_node(self, name: str, metadata: str, total_fucus: int):
-        """
-        Register a node in the blockchain.
-        :param name: The name of the node.
-        :param metadata: Metadata associated with the node.
-        :param total_fucus: Total fucus allocated to the node.
+    def register_node(self, name: str, metadata: str, total_fucus: int) -> None:
+        """Register a node in the blockchain.
+
+        Args:
+            name: The name of the node.
+            metadata: Metadata associated with the node.
+            total_fucus: Total fucus allocated to the node.
         """
         self.eth_client.execute_transaction(
             self.eth_client.nodes_manager,
@@ -223,10 +234,11 @@ class OperatorNodesManager:
             f'Successfully registered the "{name}" node in the blockchain',
         )
 
-    def deregister_node(self, node_id: int):
-        """
-        Deregister a node from the blockchain.
-        :param node_id: The ID of the node to deregister.
+    def deregister_node(self, node_id: int) -> None:
+        """Deregister a node from the blockchain.
+
+        Args:
+            node_id: The ID of the node to deregister.
         """
         self.eth_client.execute_transaction(
             self.eth_client.nodes_manager, "removeNode", self.private_key, [node_id]
@@ -236,10 +248,11 @@ class OperatorNodesManager:
             f'Successfully deregistered the "{node_id}" node from the contract',
         )
 
-    def activate_node(self, node_id: int):
-        """
-        Activate a node in the blockchain.
-        :param node_id: The ID of the node to activate.
+    def activate_node(self, node_id: int) -> None:
+        """Activate a node in the blockchain.
+
+        Args:
+            node_id: The ID of the node to activate.
         """
         self.eth_client.execute_transaction(
             self.eth_client.nodes_manager, "reactivateNode", self.private_key, [node_id]
@@ -249,10 +262,11 @@ class OperatorNodesManager:
             f'Successfully activated the "{node_id}" node in the contract',
         )
 
-    def deactivate_node(self, node_id: int):
-        """
-        Deactivate a node in the blockchain.
-        :param node_id: The ID of the node to deactivate.
+    def deactivate_node(self, node_id: int) -> None:
+        """Deactivate a node in the blockchain.
+
+        Args:
+            node_id: The ID of the node to deactivate.
         """
         self.eth_client.execute_transaction(
             self.eth_client.nodes_manager, "deactivateNode", self.private_key, [node_id]
@@ -268,13 +282,14 @@ class OperatorNodesManager:
         name: str,
         metadata: str,
         total_fucus: int,
-    ):
-        """
-        Update a node's details in the blockchain.
-        :param node_id: The ID of the node to update.
-        :param name: The new name of the node.
-        :param metadata: The new metadata associated with the node.
-        :param total_fucus: The new total fucus allocated to the node.
+    ) -> None:
+        """Update a node's details in the blockchain.
+
+        Args:
+            node_id: The ID of the node to update.
+            name: The new name of the node.
+            metadata: The new metadata associated with the node.
+            total_fucus: The new total fucus allocated to the node.
         """
         self.eth_client.execute_transaction(
             self.eth_client.nodes_manager,
@@ -287,10 +302,8 @@ class OperatorNodesManager:
             f'Successfully updated the "{node_id}" node in the contract',
         )
 
-    def print_nodes(self):
-        """
-        Print the details of all nodes registered by the operator.
-        """
+    def print_nodes(self) -> None:
+        """Print the details of all nodes registered by the operator."""
         # Get all node IDs registered by the operator
         registered_node_ids: list[int] = (
             self.eth_client.nodes_manager.functions.getOperatorNodes(

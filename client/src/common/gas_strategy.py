@@ -10,11 +10,15 @@ logger = get_logger("common")
 def get_gas_config(
     w3_eth: Eth, strategy: GasStrategy = GasStrategy.STANDARD
 ) -> tuple[int | None, int | None]:
-    """
-    Get recommended gas configuration based on strategy
+    """Get recommended gas configuration based on strategy.
 
-    :param strategy: Gas strategy - "fast", "standard", "slow", or "priority"
-    :return: Tuple with (max_priority_fee_per_gas, max_fee_per_gas)
+    Args:
+        w3_eth: Web3.eth instance for blockchain interaction.
+        strategy: Gas strategy - SLOW, STANDARD, FAST, or PRIORITY.
+
+    Returns:
+        Tuple of (max_priority_fee_per_gas, max_fee_per_gas).
+        Returns (None, None) if gas estimation fails.
     """
     try:
         latest_block = w3_eth.get_block("latest")
@@ -43,7 +47,8 @@ def get_gas_config(
                     int(base_fee * 3) + Web3.to_wei("5", "gwei"),  # max_fee_per_gas
                 ),
             }
-            return strategies.get(strategy, strategies["standard"])
+            # Use enum as key instead of string to avoid KeyError
+            return strategies.get(strategy, strategies[GasStrategy.STANDARD])
         else:
             # Legacy network
             gas_price = w3_eth.gas_price

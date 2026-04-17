@@ -32,7 +32,18 @@ class AggregatorServer:
         self.router.add_api_route("/health", self.health, methods=["GET"])
         self.app.include_router(self.router)
 
-    async def submit_proof(self, data: ProofRequest):
+    async def submit_proof(self, data: ProofRequest) -> dict:
+        """Submit a proof for verification.
+
+        Args:
+            data: Proof request containing task_id, proof, and signature.
+
+        Returns:
+            Status dictionary.
+
+        Raises:
+            HTTPException: If proof validation fails.
+        """
         try:
             await run_in_threadpool(
                 self.aggregator.process_submitted_proof,
@@ -44,9 +55,18 @@ class AggregatorServer:
         except InvalidProofError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
 
-    async def health(self):
+    async def health(self) -> dict:
+        """Health check endpoint.
+
+        Returns:
+            Status dictionary indicating the server is running.
+        """
         return {"status": "running"}
 
-    def start(self):
+    def start(self) -> None:
+        """Start the aggregator HTTP server.
+
+        Parses host and port from config and runs uvicorn.
+        """
         host, port = self.aggregator.config.aggregator_server_ip_port_address.split(":")
         uvicorn.run(self.app, host=host, port=int(port))

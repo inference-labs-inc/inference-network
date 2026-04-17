@@ -1,5 +1,4 @@
 import json
-from typing import Optional
 
 from eth_account import Account
 from eth_account.datastructures import SignedTransaction
@@ -30,31 +29,59 @@ logger = get_logger("common")
 
 
 def load_ecdsa_private_key(keystore_path: str, password: str) -> str:
-    """
-    Load ECDSA private key from keystore file
+    """Load ECDSA private key from keystore file.
+
+    Args:
+        keystore_path: Path to the keystore JSON file.
+        password: Password to decrypt the keystore.
+
+    Returns:
+        Hex-encoded private key string.
+
+    Raises:
+        FileNotFoundError: If keystore file doesn't exist.
+        ValueError: If password is incorrect or keystore is invalid.
     """
     if not password:
         logger.info(
             "ECDSA key password is not set. using empty string.",
         )
 
-    with open(keystore_path, "r") as f:
-        keystore = json.load(f)
-    return Account.decrypt(keystore, password).hex()
+    try:
+        with open(keystore_path, "r") as f:
+            keystore = json.load(f)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Keystore file not found: {keystore_path}")
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid keystore JSON in {keystore_path}: {e}")
+
+    try:
+        return Account.decrypt(keystore, password).hex()
+    except Exception as e:
+        raise ValueError(f"Failed to decrypt keystore: {e}")
 
 
 class EthereumClient:
-    """
-    Ethereum client wrapper
-    XXX: Actually a classic piece of code for being a singleton.
-    Maybe a good idea to refactor it later.
+    """Ethereum client wrapper for blockchain interactions.
+
+    Note: This class is implemented as a singleton. Consider refactoring
+    to use a proper singleton pattern if multiple instances are needed.
     """
 
     def __init__(
         self,
         eth_rpc_url: str,
         gas_strategy: GasStrategy,
-    ):
+    ) -> None:
+        """Initialize the Ethereum client.
+
+        Args:
+            eth_rpc_url: Ethereum RPC endpoint URL.
+            gas_strategy: Gas pricing strategy to use.
+
+        Raises:
+            ConnectionError: If unable to connect to the Ethereum node.
+        """
         self.w3 = Web3(Web3.HTTPProvider(eth_rpc_url))
         if not self.is_connected():
             raise ConnectionError("Failed to connect to Ethereum node")
@@ -131,16 +158,16 @@ class EthereumClient:
         return self.w3.eth.chain_id
 
     def check_contract_deployed(self, address: str) -> None:
-        """
-        Check if a contract is deployed at the given address.
-        This is kinda optional, but useful for debugging.
-        I'm tired by errors like "execution reverted: revert: Address: call to non-contract"
+        """Check if a contract is deployed at the given address.
 
-        :param address: Address to check
-        :return: None
+        Args:
+            address: Ethereum address to check.
+
+        Raises:
+            ValueError: If no contract bytecode is found at the address.
         """
         code = self.w3.eth.get_code(address)
-        if code == b"0x":
+        if code in (b"", b"0x"):
             raise ValueError(f"Address {address} is not a contract. Code: {code}")
 
     def execute_transaction(
@@ -149,19 +176,24 @@ class EthereumClient:
         function_name: str,
         private_key: str,
         args: list,
-        gas_limit: Optional[int] = None,
+        gas_limit: int | None = None,
         gas_multiplier: float = 1.1,
     ) -> TxReceipt:
-        """
-        Execute a transaction on the Ethereum network with dynamic gas pricing
+        """Execute a transaction on the Ethereum network with dynamic gas pricing.
 
-        :param contract_obj: Contract object to call
-        :param function_name: Name of the contract function to call
-        :param private_key: Private key to sign the transaction
-        :param args: Arguments to pass to the contract function
-        :param gas_limit: Optional gas limit override. If None, will estimate and add buffer
-        :param gas_multiplier: Multiplier for gas estimation buffer (default 1.1 = 10% buffer)
-        :return: Transaction receipt
+        Args:
+            contract_obj: Contract object to call.
+            function_name: Name of the contract function to call.
+            private_key: Private key to sign the transaction.
+            args: Arguments to pass to the contract function.
+            gas_limit: Optional gas limit override. If None, will estimate and add buffer.
+            gas_multiplier: Multiplier for gas estimation buffer (default 1.1 = 10% buffer).
+
+        Returns:
+            Transaction receipt.
+
+        Raises:
+            RuntimeError: If the transaction execution fails.
         """
         account = Account.from_key(private_key)
 
@@ -199,8 +231,8 @@ class EthereumClient:
 
     def update_tx_params(
         self,
-        base_tx,
-        gas_limit: Optional[int] = None,
+        base_tx: dict,
+        gas_limit: int | None = None,
         gas_multiplier: float = 1.1,
     ) -> dict:
         # Estimate gas limit if not provided
