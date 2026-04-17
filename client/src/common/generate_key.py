@@ -1,20 +1,19 @@
 import json
-from typing import Optional
 
 from web3 import Web3
 from eth_account import Account
 
 
 def generate_keystore(
-    private_key_hex: str, password: Optional[str], file_path: Optional[str] = None
-):
-    """
-    Generate a JSON keystore file from a raw hex private key.
+    private_key_hex: str, password: str | None, file_path: str | None = None
+) -> None:
+    """Generate a JSON keystore file from a raw hex private key.
 
-    :param private_key_hex: The raw private key as a hex string (e.g., "0x...")
-    :param password: The password to encrypt the private key
-    :param file_path: Optional file path to save the keystore JSON. If None, print to console.
-    :return: None
+    Args:
+        private_key_hex: The raw private key as a hex string (e.g., "0x...").
+        password: The password to encrypt the private key.
+        file_path: Optional file path to save the keystore JSON.
+            If None, print to console.
     """
     # Ensure the private key is in bytes format
     private_key_bytes = Web3.to_bytes(hexstr=private_key_hex)

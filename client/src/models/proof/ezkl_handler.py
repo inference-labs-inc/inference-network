@@ -1,9 +1,8 @@
 import json
-import os
 import subprocess
 import traceback
 from enum import Enum
-from typing import Optional, Iterable
+from typing import Iterable
 
 import ezkl
 
@@ -28,15 +27,25 @@ class EZKLHandler:
     This class provides methods for generating and verifying proofs using EZKL.
     """
 
-    def __init__(self, model_id: str, task_id: str, inputs: Optional[list[float]]):
+    def __init__(self, model_id: str, task_id: str, inputs: list[float] | None) -> None:
+        """Initialize EZKL handler for proof generation and verification.
+
+        Args:
+            model_id: Model identifier used to locate model files.
+            task_id: Task identifier for proof file organization.
+            inputs: Input data as a list of floats.
+        """
         self.input_data = inputs
 
         model_path = MODELS_FOLDER / model_id
         self.compiled_model_path = model_path / "model.compiled"
-        self.pk_path = model_path / "pk.key"  # TODO: ...
+        self.pk_path = model_path / "pk.key"
         self.vk_path = model_path / "vk.key"
         self.settings_path = model_path / "settings.json"
-        self.settings = json.load(open(self.settings_path, "r", encoding="utf-8"))
+
+        # Properly close the file handle after loading settings
+        with open(self.settings_path, "r", encoding="utf-8") as f:
+            self.settings = json.load(f)
 
         self.proof_dir = PROOFS_FOLDER / task_id
         self.proof_dir.mkdir(parents=True, exist_ok=True)
@@ -44,7 +53,8 @@ class EZKLHandler:
         self.witness_path = self.proof_dir / "witness.json"
         self.proof_filepath = self.proof_dir / "proof.json"
 
-    def gen_input_file(self):
+    def gen_input_file(self) -> None:
+        """Generate input JSON file for EZKL proof generation."""
         logger.info("Generating input file")
         if isinstance(self.input_data, list):
             input_data = self.input_data
@@ -57,6 +67,14 @@ class EZKLHandler:
         logger.info(f"Generated input.json with data: {data}")
 
     def gen_proof(self) -> tuple[str, str]:
+        """Generate a ZK proof using EZKL.
+
+        Returns:
+            Tuple of (proof_json_string, instances_json_string).
+
+        Raises:
+            Exception: If proof generation fails.
+        """
         try:
             logger.info("Starting proof generation...")
 
@@ -100,6 +118,15 @@ class EZKLHandler:
         validator_inputs: Iterable[float],
         proof: str | dict,
     ) -> bool:
+        """Verify a ZK proof using EZKL.
+
+        Args:
+            validator_inputs: Input values used for verification.
+            proof: Proof data as JSON string or dictionary.
+
+        Returns:
+            True if proof is verified successfully, False otherwise.
+        """
         if not proof:
             return False
 
@@ -136,12 +163,20 @@ class EZKLHandler:
             )
             return "verified: true" in result.stdout
         except subprocess.TimeoutExpired:
-            logger.warning("Verification process timed out after 60 seconds")
+            logger.warning("Verification process timed out after 600 seconds")
             return False
         except subprocess.CalledProcessError:
             return False
 
     def generate_witness(self, return_content: bool = False) -> list | dict:
+        """Generate witness data for EZKL proof.
+
+        Args:
+            return_content: If True, return parsed JSON content. Otherwise return stdout.
+
+        Returns:
+            Witness data as list/dict or stdout string.
+        """
         logger.debug("Generating witness...")
 
         result = subprocess.run(
@@ -169,7 +204,15 @@ class EZKLHandler:
                 return json.load(f)
         return result.stdout
 
-    def translate_inputs_to_instances(self, validator_inputs) -> list[int]:
+    def translate_inputs_to_instances(self, validator_inputs: Iterable) -> list[int]:
+        """Translate validator inputs to EZKL field element instances.
+
+        Args:
+            validator_inputs: Input values to translate.
+
+        Returns:
+            List of field element integers for EZKL verification.
+        """
         scale_map = self.settings.get("model_input_scales", [])
         type_map = self.settings.get("input_types", [])
         return [

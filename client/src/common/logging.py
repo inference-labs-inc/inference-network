@@ -6,8 +6,13 @@ from typing import Optional
 logger = logging.getLogger("inference")
 
 
-def setup_logging(verbose: bool = False, log_file: Optional[str] = None):
-    """Setup logging configuration with optional verbosity and file output."""
+def setup_logging(verbose: bool = False, log_file: Optional[str] = None) -> None:
+    """Setup logging configuration with optional verbosity and file output.
+
+    Args:
+        verbose: If True, set log level to DEBUG. Otherwise INFO.
+        log_file: Optional path to write log output to.
+    """
     # Set log level based on verbosity
     log_level = logging.DEBUG if verbose else logging.INFO
 
@@ -39,33 +44,40 @@ def setup_logging(verbose: bool = False, log_file: Optional[str] = None):
 
 
 def get_logger(name: Optional[str] = None) -> logging.Logger:
-    """Get a logger instance."""
+    """Get a logger instance.
+
+    Args:
+        name: Optional name suffix for the logger. If None, returns the root inference logger.
+
+    Returns:
+        Logger instance.
+    """
     if name:
         return logging.getLogger(f"inference.{name}")
     return logger
 
 
 # Backward compatibility - create module-level logger functions
-def debug(message: str, *args, **kwargs):
+def debug(message: str, *args, **kwargs) -> None:
     """Log debug message."""
     logger.debug(message, *args, **kwargs)
 
 
-def info(message: str, *args, **kwargs):
+def info(message: str, *args, **kwargs) -> None:
     """Log info message."""
     logger.info(message, *args, **kwargs)
 
 
-def warning(message: str, *args, **kwargs):
+def warning(message: str, *args, **kwargs) -> None:
     """Log warning message."""
     logger.warning(message, *args, **kwargs)
 
 
-def error(message: str, *args, **kwargs):
+def error(message: str, *args, **kwargs) -> None:
     """Log error message."""
     logger.error(message, *args, **kwargs)
 
 
-def critical(message: str, *args, **kwargs):
+def critical(message: str, *args, **kwargs) -> None:
     """Log critical message."""
     logger.critical(message, *args, **kwargs)

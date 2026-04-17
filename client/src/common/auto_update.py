@@ -15,10 +15,8 @@ REQ_UPDATE_TIMEOUT = 60
 logger = get_logger("auto_update")
 
 
-def restart_app():
-    """
-    Restart the application to apply the updated changes
-    """
+def restart_app() -> None:
+    """Restart the application to apply updated changes."""
     logger.info("App restarting due to auto-update")
     python = sys.executable
     # trunk-ignore(bandit/B606)
@@ -30,17 +28,19 @@ class AutoUpdate:
     Automatic update utility
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.last_check_time = 0
         try:
             self.repo = git.Repo(search_parent_directories=True)
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to initialize the repository")
             self.repo = None
 
     def get_local_latest_tag(self) -> Optional[git.Tag]:
-        """
-        Get the latest tag from the local git repository
+        """Get the latest tag from the local git repository.
+
+        Returns:
+            Latest git tag or None if no tags found or error occurs.
         """
         try:
             tags = sorted(self.repo.tags, key=lambda t: t.commit.committed_datetime)
@@ -48,13 +48,15 @@ class AutoUpdate:
             if current_tag:
                 logger.info(f"Current tag: {current_tag.name}")
             return current_tag
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to get the current tag")
             return None
 
-    def get_latest_release_tag(self):
-        """
-        Get the latest release tag from the GitHub repository
+    def get_latest_release_tag(self) -> Optional[str]:
+        """Get the latest release tag from the GitHub repository.
+
+        Returns:
+            Tag name string or None if fetch fails.
         """
         try:
             headers = {"Accept": "application/vnd.github.v3+json"}
@@ -67,9 +69,10 @@ class AutoUpdate:
             logger.exception("Failed to fetch the latest release from GitHub.")
             return None
 
-    def attempt_packages_update(self):
-        """
-        Attempt to update the packages by installing the requirements from the requirements.txt file
+    def attempt_packages_update(self) -> None:
+        """Attempt to update the packages using uv sync.
+
+        Installs requirements from the requirements.txt file.
         """
         logger.info("Attempting to update packages...")
 
@@ -82,12 +85,14 @@ class AutoUpdate:
                 timeout=REQ_UPDATE_TIMEOUT,
             )
             logger.info("Successfully updated packages.")
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to update requirements")
 
     def update_to_latest_release(self) -> bool:
-        """
-        Update the repository to the latest release
+        """Update the repository to the latest release.
+
+        Returns:
+            True if update was successful, False otherwise.
         """
         try:
 
@@ -128,16 +133,18 @@ class AutoUpdate:
             )
             return True
 
-        except Exception as e:
+        except Exception:
             logger.exception(
                 "Automatic update failed. Manually pull the latest changes and update.",
             )
 
         return False
 
-    def try_update(self):
-        """
-        Automatic update entrypoint method
+    def try_update(self) -> None:
+        """Automatic update entrypoint method.
+
+        Checks if update is needed and performs update if necessary.
+        Only checks once every 300 seconds to avoid excessive API calls.
         """
         if not self.repo:
             logger.warning("Git repository is not initialized.")

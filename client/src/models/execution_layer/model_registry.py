@@ -1,7 +1,6 @@
 import importlib.util
 import sys
 from pathlib import Path
-from typing import Dict, Optional
 
 import requests
 
@@ -146,7 +145,7 @@ class ModelRegistry:
         self.private_key = private_key
         self.models_root = models_root
 
-    def sync_models(self) -> Dict[str, int]:
+    def sync_models(self) -> dict[str, int]:
         """
         Synchronize local models with the blockchain registry.
 
@@ -193,7 +192,7 @@ class ModelRegistry:
                 continue
 
             # Check if model exists in blockchain
-            existing_model_id: Optional[int] = None
+            existing_model_id: int | None = None
             for model_id, model_data in blockchain_models.items():
                 if model_data["name"].lower() == model_name.lower():
                     existing_model_id = model_id
@@ -201,11 +200,12 @@ class ModelRegistry:
 
             if existing_model_id is not None:
                 # Model exists, check if update is needed
+                existing_data = blockchain_models[existing_model_id]
                 logger.debug(
                     f"Model '{model_name}' exists in blockchain with ID {existing_model_id}"
                 )
 
-                if model_data["active"] is False:
+                if existing_data["active"] is False:
                     logger.info(
                         f"Enabling model '{model_name}' (id {existing_model_id})..."
                     )
@@ -214,7 +214,7 @@ class ModelRegistry:
                     )
 
                 needs_update = self._check_model_needs_update(
-                    existing_model_id, metadata, blockchain_models[existing_model_id]
+                    existing_model_id, metadata, existing_data
                 )
 
                 if needs_update:
@@ -241,7 +241,7 @@ class ModelRegistry:
 
     def _discover_local_models(
         self,
-    ) -> Dict[str, ModelMetadata]:
+    ) -> dict[str, ModelMetadata]:
         """
         Discover model folders in `models_root` that contain metadata.json.
         """
@@ -255,7 +255,7 @@ class ModelRegistry:
 
         return local_models
 
-    def _get_blockchain_models(self) -> Dict[int, Dict]:
+    def _get_blockchain_models(self) -> dict[int, dict]:
         """
         Retrieve all models from the blockchain registry.
 
@@ -325,7 +325,7 @@ class ModelRegistry:
         self,
         model_id: int,
         local_metadata: ModelMetadata,
-        blockchain_data: Dict,
+        blockchain_data: dict,
     ) -> bool:
         """
         Check if a blockchain model needs to be updated based on local metadata.

@@ -2,12 +2,12 @@ import os
 import random
 import threading
 import time
-from typing import Tuple
 
 import eth_abi
 from eth_account import Account
 from eth_account.messages import encode_defunct
 from web3 import Web3
+from web3.contract import Contract
 
 from aggregator.errors import InvalidProofError
 from aggregator.server import AggregatorServer
@@ -31,6 +31,11 @@ logger = get_logger("aggregator")
 
 
 def run_aggregator(config: AggregatorConfig) -> None:
+    """Start the Inference Aggregator with the given configuration.
+
+    Args:
+        config: Validated aggregator configuration object.
+    """
     logger.info("Starting Inference Aggregator...")
     aggregator = Aggregator(config=config)
     threading.Thread(target=aggregator.start_sending_new_tasks, args=[]).start()
@@ -38,19 +43,9 @@ def run_aggregator(config: AggregatorConfig) -> None:
     threading.Thread(target=aggregator.check_pending_tasks, args=[]).start()
     aggregator.start_server()
 
-    # with tqdm(total=100, desc="Initializing aggregator") as pbar:
-    #     aggregator = Aggregator(config=config)
-    #     pbar.update(25)
-    #     # threading.Thread(target=aggregator.start_submitting_signatures, args=[]).start()
-    #     threading.Thread(target=aggregator.start_sending_new_tasks, args=[]).start()
-    #     aggregator.start_server()
-    #     pbar.update(75)
-    #     while True:
-    #         time.sleep(10)
-
 
 class Aggregator:
-    def __init__(self, config: AggregatorConfig = None):
+    def __init__(self, config: AggregatorConfig) -> None:
         self.config = config
         self.eth_client = EthereumClient(
             eth_rpc_url=self.config.eth_rpc_url, gas_strategy=self.config.gas_strategy
@@ -63,24 +58,23 @@ class Aggregator:
         self.proof_req_probability = self.config.proof_request_probability
         self.aggregator_address = Account.from_key(self.private_key).address
 
-        self.tasks = {}
-        self.taskResponses = {}
-
         self.auto_update = AutoUpdate()
 
         # HTTP server
         self.server = AggregatorServer(self)
 
-    def start_server(self):
+    def start_server(self) -> None:
         """
-        Runs and blocks the current thread
+        Runs and blocks the current thread.
         """
         self.server.start()
 
-    def start_sending_new_tasks(self, loop_running: bool = True):
+    def start_sending_new_tasks(self, loop_running: bool = True) -> None:
         """
         Runs in a separate thread and sends new tasks to the task manager.
-        TODO: make sleep time configurable
+
+        Args:
+            loop_running: If True, continuously send tasks. If False, send one and stop.
         """
         i = 0
         while True:
@@ -94,7 +88,15 @@ class Aggregator:
                 self.auto_update.try_update()
             i += 1
 
-    def send_new_task(self, i) -> int | None:
+    def send_new_task(self, i: int) -> int | None:
+        """Send a new task to the task manager.
+
+        Args:
+            i: Task nonce/counter value.
+
+        Returns:
+            Task ID if successful, None if task could not be sent.
+        """
         model_id, model_name = self.get_model_id()
         if model_id is None:
             logger.info(
@@ -164,8 +166,13 @@ class Aggregator:
         return task_index
 
     def get_random_operator(self, model_id: int) -> str | None:
-        """
-        Get a random operator address from the allocation manager.
+        """Get a random operator address from the allocation manager.
+
+        Args:
+            model_id: The model ID to find operators for.
+
+        Returns:
+            Random operator address or None if no operators found.
         """
         fucus: int = self.get_model_fucus(model_id)
         operators = (
@@ -179,9 +186,11 @@ class Aggregator:
             logger.error("No operators found in the allocation manager")
             return None
 
-    def get_model_id(self) -> Tuple[int | None, str | None]:
-        """
-        Get a model ID from the model registry.
+    def get_model_id(self) -> tuple[int | None, str | None]:
+        """Get a model ID from the model registry.
+
+        Returns:
+            Tuple of (model_id, model_name) or (None, None) if no models found.
         """
         models_count = self.eth_client.model_registry.functions.modelIndex().call() - 1
         # `modelIndex` is an index for future new model.
@@ -225,9 +234,14 @@ class Aggregator:
             fucus = 0
         return fucus
 
-    def get_token(self, task: dict):
-        """
-        Get the token address used for the task fees.
+    def get_token(self, task: dict) -> Contract | None:
+        """Get the token contract used for task fees.
+
+        Args:
+            task: Task dictionary containing operator address.
+
+        Returns:
+            ERC20 token contract or None if not found.
         """
         allocated_sets = self.eth_client.allocation_manager.functions.getAllocatedSets(
             task["operator"]
@@ -287,11 +301,14 @@ class Aggregator:
 
             time.sleep(3)
 
-    def process_completed_task(self, event):
-        """
-        Process a completed task event.
-        This function is called when a task is completed and the `TaskCompleted` event is emitted.
-        It checks the task state and either resolves the task or challenges it for a proof.
+    def process_completed_task(self, event: dict) -> None:
+        """Process a completed task event.
+
+        Called when a task is completed and the TaskCompleted event is emitted.
+        Checks the task state and either resolves the task or challenges it for a proof.
+
+        Args:
+            event: Event dictionary containing task information.
         """
         task_id = event["args"]["taskId"]
         logger.info(f"Processing completed task #{task_id}")
@@ -312,18 +329,34 @@ class Aggregator:
             # here we have a winner, gonna just resolve the task
             self.resolve_task(task_id=task_id, resolved=True)
 
-    def challenge_task(self, task_id: int):
-        """
-        Challenge a task by its ID.
+    def challenge_task(self, task_id: int) -> None:
+        """Challenge a task by its ID.
+
         Two cases of using this function:
-        1. The task is not completed for a long time (300 blocks or something). So we are slashing the operator
+        1. The task is not completed for a long time (300 blocks or something). So we are slashing the operator.
         2. The task is completed, but we want to get a proof from the operator.
+
+        Args:
+            task_id: ID of the task to challenge.
         """
         self.eth_client.execute_transaction(
             self.eth_client.task_manager, "challengeTask", self.private_key, [task_id]
         )
 
     def process_submitted_proof(self, task_id: int, proof: str, signature: str) -> bool:
+        """Process a submitted proof for verification.
+
+        Args:
+            task_id: ID of the task.
+            proof: Proof data as string.
+            signature: Signature from the operator.
+
+        Returns:
+            True if proof is verified successfully.
+
+        Raises:
+            InvalidProofError: If proof verification fails.
+        """
         logger.info(
             f"Processing proof submitted for the task #{task_id}...",
         )
@@ -411,11 +444,12 @@ class Aggregator:
             self.resolve_task(task_id=task_id, resolved=False)
             raise InvalidProofError("Proof is not verified")
 
-    def resolve_task(self, task_id: int, resolved: bool):
-        """
-        Resolve a task by its ID.
-        If `resolved` is True, the task is resolved as completed.
-        If `resolved` is False, the task is resolved as rejected and the operator is slashed.
+    def resolve_task(self, task_id: int, resolved: bool) -> None:
+        """Resolve a task by its ID.
+
+        Args:
+            task_id: ID of the task to resolve.
+            resolved: If True, resolve as completed. If False, resolve as rejected (slash operator).
         """
         self.eth_client.execute_transaction(
             self.eth_client.task_manager,
@@ -424,10 +458,11 @@ class Aggregator:
             [task_id, resolved],
         )
 
-    def check_pending_tasks(self):
-        """
-        Check for pending tasks that are not completed for a long time.
-        Intended to run in a separate thread.
+    def check_pending_tasks(self) -> None:
+        """Check for pending tasks that are not completed for a long time.
+
+        Intended to run in a separate thread. Challenges tasks that have been
+        assigned or challenged for too long.
         """
         while True:
             pending_ids: list[int] = (

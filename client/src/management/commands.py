@@ -14,6 +14,7 @@ from common.config import OwnerConfig, load_config
 from common.constants import MODELS_DATA_DIR
 from common.logging import get_logger, setup_logging
 from common.eth import load_ecdsa_private_key
+from management.owner import AvsOwner
 from models.execution_layer.model_registry import ModelRegistry
 
 # Create a sub-application for management commands

@@ -1,12 +1,11 @@
 import json
 import os
 import time
-from typing import Optional
 
 import eth_abi
 import requests
 from eth_account import Account
-from eth_account.datastructures import SignedMessage, SignedTransaction
+from eth_account.datastructures import SignedMessage
 from eth_account.messages import encode_defunct
 from tqdm import tqdm
 from web3 import Web3
@@ -87,9 +86,13 @@ class TaskOperator:
                 self.auto_update.try_update()
             time.sleep(3)
 
-    def process_assigned_task(self, task_id: int, operator_address: bytes):
-        """Process assigned task by task ID and operator address."""
+    def process_assigned_task(self, task_id: int, operator_address: bytes) -> None:
+        """Process assigned task by task ID and operator address.
 
+        Args:
+            task_id: The ID of the assigned task.
+            operator_address: The operator address from the event (as bytes).
+        """
         if operator_address != self.operator_address:
             logger.info(
                 f"Operator address {operator_address} does not match "
@@ -101,7 +104,7 @@ class TaskOperator:
         task = self.eth_client.task_manager.functions.tasks(task_id).call()
         model_id: int = task[TaskStructMap.MODEL_ID]  # uint256 modelId
         inputs: bytes = task[TaskStructMap.INPUTS]  # bytes inputs
-        operator_address: str = task[TaskStructMap.OPERATOR]  # address operator
+        task_operator: str = task[TaskStructMap.OPERATOR]  # address operator
 
         model_name: str = self.eth_client.model_registry.functions.modelName(
             model_id
@@ -121,18 +124,23 @@ class TaskOperator:
             [task_id, output_bytes],
         )
 
-    def process_challenged_task(self, task_id: int):
+    def process_challenged_task(self, task_id: int) -> None:
+        """Process a challenged task by generating and submitting proof.
+
+        Args:
+            task_id: The ID of the challenged task.
+        """
         # get task details, `struct IInferenceTaskManager.Task`
         task = self.eth_client.task_manager.functions.tasks(task_id).call()
 
         starting_block: int = task[TaskStructMap.START_BLOCK]  # uint256 startBlock
         model_id: int = task[TaskStructMap.MODEL_ID]  # uint256 modelId
         inputs: bytes = task[TaskStructMap.INPUTS]  # bytes inputs
-        operator_address: str = task[TaskStructMap.OPERATOR]  # address operator
+        task_operator: str = task[TaskStructMap.OPERATOR]  # address operator
 
-        if operator_address != self.operator_address:
+        if task_operator != self.operator_address:
             logger.info(
-                f"Operator address {operator_address} does not match "
+                f"Operator address {task_operator} does not match "
                 f"the operator address {self.operator_address}, skipping...",
             )
             return
@@ -186,9 +194,16 @@ class TaskOperator:
 
     def generate_proof_for_task(
         self, inputs: bytes, task_id: int, model_id: int
-    ) -> Optional[str]:
-        """
-        Generate proof for the task with the given task_id.
+    ) -> str | None:
+        """Generate proof for the task with the given task_id.
+
+        Args:
+            inputs: Raw input bytes from the task.
+            task_id: The ID of the task.
+            model_id: The model ID for the task.
+
+        Returns:
+            Proof string if successful, None otherwise.
         """
         # generate proof for the task
         model_name: str = self.eth_client.model_registry.functions.modelName(
@@ -210,9 +225,12 @@ class TaskOperator:
         self,
         task_id: int,
         output: bytes,
-    ):
-        """
-        Post task output to the task manager contract.
+    ) -> None:
+        """Post task output to the task manager contract.
+
+        Args:
+            task_id: The ID of the task.
+            output: The output bytes to submit.
         """
         self.eth_client.execute_transaction(
             self.eth_client.task_manager,
